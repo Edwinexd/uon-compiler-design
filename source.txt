@@ -1,0 +1,6 @@
+CD24 a1
+main
+    variable: int
+begin
+    printline "Hello World!"
+end CD24 a1
