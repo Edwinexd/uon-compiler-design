@@ -3,4 +3,5 @@ main
     variable: int
 begin
     printline "Hello World!"
+    1.10
 end CD24 a1
