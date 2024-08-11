@@ -222,8 +222,8 @@ public class CD24Scanner {
         if (invalidBuffer.length() == 0) {
             return;
         }
+        // TODO: This column handling is not correct, unterminated strings returns TUNDF8:-30
         Token t = new Token(TokenType.TUNDF, invalidBuffer.toString(), currentLine, currentColumn - invalidBuffer.length());
-        System.out.println(invalidBuffer.length());
         tokens.add(t);
         tokenOutput.write(t);
         invalidBuffer.delete(0, invalidBuffer.length());
@@ -360,6 +360,7 @@ public class CD24Scanner {
         return null;
     }
 
+    // TODO: Column counting is not implemented
     private void tokenizeConsumeDelimiters() {
         if (buffer.length() > 2) {
             for (int i = 0; i < buffer.length()-2; i++) {
