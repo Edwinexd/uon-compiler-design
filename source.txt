@@ -1,7 +1,13 @@
 CD24 a1
 main
-    variable: int
+    variable:==: int
 begin
-    printline "Hello World!"
+    printline "Hello World!
     1.10
+    += 1.551251251512512
+    !=!!!!=!!####!
+    =/--= Hello world
+    /** fuckin hell
+
+    **/
 end CD24 a1
