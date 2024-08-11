@@ -2,7 +2,7 @@ CD24 a1
 main
     variable:==: int
 begin
-    printline "Hello World!
+    printline "Hello World!"
     1.10
     += 1.551251251512512
     !=!!!!=!!####!
