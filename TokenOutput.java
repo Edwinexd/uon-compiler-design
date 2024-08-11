@@ -95,12 +95,6 @@ public class TokenOutput {
                 printToFile(character);
             }
 
-            if (errors.size() == 0)
-            {
-                // no errors and there be n new lines
-                printToFile(character);
-            }
-
             // clear errors
             errors.clear();
 
