@@ -120,6 +120,7 @@ public class CD24Scanner {
                 return;
             }
             if (mode == Mode.IDENTIFIER || mode == Mode.NUMEIRC || mode == Mode.FLOAT || mode == Mode.DELIMITER || mode == Mode.INVALID) {
+                System.out.println("line: " + currentLine + invalidBuffer.toString());
                 tokenizeBuffer();
                 return;
             }
@@ -215,7 +216,7 @@ public class CD24Scanner {
         invalidBuffer.append(c);
     }
 
-    private void tokenizeInvalid() {
+    private void tokenizeInvalid(int tentativeOffset) {
         /*
          * Should be called just before a valid token is created
          */
@@ -223,18 +224,26 @@ public class CD24Scanner {
             return;
         }
         // TODO: This column handling is not correct, unterminated strings returns TUNDF8:-30
-        Token t = new Token(TokenType.TUNDF, invalidBuffer.toString(), currentLine, currentColumn - invalidBuffer.length());
+        Token t = new Token(TokenType.TUNDF, invalidBuffer.toString(), currentLine, currentColumn - invalidBuffer.length() - tentativeOffset);
         tokens.add(t);
         tokenOutput.write(t);
         invalidBuffer.delete(0, invalidBuffer.length());
     }
 
-    private void createToken(TokenType type, String lexeme, int column) {
-        tokenizeInvalid();
+    private void tokenizeInvalid() {
+        tokenizeInvalid(0);
+    }
+
+    private void createToken(TokenType type, String lexeme, int column, int tentativeOffset) {
+        tokenizeInvalid(tentativeOffset);
         Token t = new Token(type, lexeme, currentLine, column);
         // System.out.println(t);
         tokens.add(t);
         tokenOutput.write(t);
+    }
+
+    private void createToken(TokenType type, String lexeme, int column) {
+        createToken(type, lexeme, column, 0);
     }
 
     // TODO: This is stupid
@@ -360,7 +369,6 @@ public class CD24Scanner {
         return null;
     }
 
-    // TODO: Column counting is not implemented
     private void tokenizeConsumeDelimiters() {
         if (buffer.length() > 2) {
             for (int i = 0; i < buffer.length()-2; i++) {
@@ -406,7 +414,7 @@ public class CD24Scanner {
             }
 
             if (tType != null) {
-                createToken(tType, null, 0);
+                createToken(tType, null, currentColumn - buffer.length(), buffer.length());
                 buffer.delete(0, 2);
                 continue;
             }
@@ -415,7 +423,7 @@ public class CD24Scanner {
             char c = buffer.charAt(0);
             tType = getTokenTypeOf(c);
             if (tType != null) {
-                createToken(tType, null, 0);
+                createToken(tType, null, currentColumn - buffer.length(), buffer.length());
                 buffer.deleteCharAt(0);
                 continue;
             } else {
@@ -435,7 +443,7 @@ public class CD24Scanner {
         char c = buffer.charAt(0);
         TokenType tType = getTokenTypeOf(c);
         if (tType != null) {
-            createToken(tType, null, 0);
+            createToken(tType, null, currentColumn - buffer.length(), buffer.length());
             buffer.deleteCharAt(0);
             return;
         }
