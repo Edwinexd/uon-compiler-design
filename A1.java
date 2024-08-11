@@ -1,7 +1,7 @@
-import java.io.FileNotFoundException;
+import java.io.IOException;
 
 public class A1 {
-    public static void main(String[] args) throws FileNotFoundException {
+    public static void main(String[] args) throws IOException {
         if (args.length == 0) {
             throw new IllegalArgumentException("Source file name is missing");
         }
@@ -20,10 +20,12 @@ public class A1 {
         // int age
         // VARIABLE/METHOD/CONST/WHATEVER_NAME => "age" | doThing
         // symbolTable.insertToken(VARIABLE/METHOD/CONST/WHATEVER_NAME, token)
-        CD24Scanner scanner = new CD24Scanner(new TokenOutput());
-
-        
+        TokenOutput tokenOutput = new TokenOutput();
+        tokenOutput.initializeWriter("output.txt");
+        CD24Scanner scanner = new CD24Scanner(tokenOutput);
         scanner.scan(args[0]);
+        tokenOutput.closeWriter();
+
 
     }
 }

@@ -2,9 +2,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Scanner;
 import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.IOException;
 
 // TODO: listing file not created!
+// TODO: Column numbers are incorrect
+// TODO: currentLine and currentColumn are not updated at all
+// 
 
 public class CD24Scanner {
     private int currentLine = 1;
@@ -21,7 +24,7 @@ public class CD24Scanner {
         this.tokenOutput = tokenOutput;
     }
 
-    public void scan(String path) throws FileNotFoundException {
+    public void scan(String path) throws IOException {
         try (Scanner scanner = new Scanner(new File(path))) {
             scanner.useDelimiter("");
             while (scanner.hasNext()) {
@@ -31,7 +34,21 @@ public class CD24Scanner {
         complete();
     }
 
-    public void feed(char c) {
+    public void feed(char c) throws IOException {
+        handleChar(c);
+        if (c == 13) {
+            return;
+        }
+        tokenOutput.feedChar(c);
+        if (c == '\n') {
+            currentLine++;
+            currentColumn = 1;
+        } else {
+            currentColumn++;
+        }
+    }
+
+    private void handleChar(char c) {
         // 1
         // numeric
         // ;
@@ -205,15 +222,17 @@ public class CD24Scanner {
         if (invalidBuffer.length() == 0) {
             return;
         }
-        Token t = new Token(TokenType.TUNDF, invalidBuffer.toString(), currentLine, currentColumn);
-        System.out.println(t);
+        Token t = new Token(TokenType.TUNDF, invalidBuffer.toString(), currentLine, currentColumn - invalidBuffer.length());
+        System.out.println(invalidBuffer.length());
+        tokens.add(t);
+        tokenOutput.write(t);
         invalidBuffer.delete(0, invalidBuffer.length());
     }
 
-    private void createToken(TokenType type, String lexeme, int bufferPosition) {
+    private void createToken(TokenType type, String lexeme, int column) {
         tokenizeInvalid();
-        Token t = new Token(type, lexeme, currentLine, currentColumn - bufferPosition);
-        System.out.println(t);
+        Token t = new Token(type, lexeme, currentLine, column);
+        // System.out.println(t);
         tokens.add(t);
         tokenOutput.write(t);
     }
@@ -436,24 +455,25 @@ public class CD24Scanner {
         }
         if (mode == Mode.IDENTIFIER) {
             TokenType type = getIdentifierType(buffer.toString());
-            createToken(type, type == TokenType.TIDEN ? buffer.toString() : null, 0);
+            createToken(type, type == TokenType.TIDEN ? buffer.toString() : null, currentColumn - buffer.length());
         } else if (mode == Mode.DELIMITER) {
             tokenizeConsumeDelimiters();
         } else if (mode == Mode.FLOAT) {
             if (buffer.charAt(buffer.length()-1) == '.') {
                 // Not a float, ended with a dot so will correspond to two tokens
                 // int + dot
-                String intLexeme = buffer.substring(0, buffer.length()-2);
-                createToken(TokenType.TILIT, intLexeme, 0);
-                createToken(TokenType.TDOTT, null, buffer.length()-1);
+                String intLexeme = buffer.substring(0, buffer.length()-1);
+                createToken(TokenType.TILIT, intLexeme, currentColumn - buffer.length());
+                createToken(TokenType.TDOTT, null, currentColumn - (buffer.length()-intLexeme.length()));
             } else {
-                createToken(TokenType.TFLIT, buffer.toString(), 0);
+                createToken(TokenType.TFLIT, buffer.toString(), currentColumn - buffer.length());
             }
         } else if (mode == Mode.NUMEIRC) {
-            createToken(TokenType.TILIT, buffer.toString(), 0);
+            createToken(TokenType.TILIT, buffer.toString(), currentColumn - buffer.length());
         } else if (mode == Mode.STRING) {
-            // skipping first and last character
-            createToken(TokenType.TSTRG, buffer.substring(1, buffer.length()-1), 0);
+            // skipping first and last character for lexeme
+            // TODO: This is off by one for some reason
+            createToken(TokenType.TSTRG, buffer.substring(1, buffer.length()-1), currentColumn - buffer.length());
         } else if (mode == Mode.INVALID) {
             // Explicitly requesting to tokenize invalid buffer
             // to keep everything consistent, buffer is invalidated i.e.
