@@ -8,19 +8,30 @@ public class Parser
     // token =>  
 
 
+    // built after
+    private JTree syntaxTree = new JTree(new SyntaxTreeNode(null));
 
-    private JTree syntaxTree = new JTree();
+    private SyntaxTreeNode root = new SyntaxTreeNode(null);
 
     public void pass(Token token) 
     {
         if (token.getType() == TokenType.TIDEN)
         {
+            // add to root
+
             SyntaxTreeNode node = new SyntaxTreeNode(token);
+
+            root.add(node);
 
             //syntaxTree.add(node);
         }
 
 
 
+        
     }
+
+
+
+
 }

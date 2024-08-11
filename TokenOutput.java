@@ -1,37 +1,37 @@
-import java.io.FileWriter;
+//import java.io.FileWriter;
 
 public class TokenOutput {
     // resets when you make a newline
     private int writtenCount;
-    private FileWriter writer;
+    //private FileWriter writer;
 
     /// i feel like the writer opening every time might cause too much overhead
 
-    public void initializeWriter(String path)
-    {
-        try 
-        {
-            writer = new FileWriter(path);
-        }
-        catch (Exception e)
-        {
-            e.getStackTrace();
-        }
+    // public void initializeWriter(String path)
+    // {
+    //     try 
+    //     {
+    //         writer = new FileWriter(path);
+    //     }
+    //     catch (Exception e)
+    //     {
+    //         e.getStackTrace();
+    //     }
 
-    }
+    // }
 
-    public void closeWriter(String path)
-    {
-        try 
-        {
-            writer = new FileWriter(path);
-        }
-        catch (Exception e)
-        {
-            e.getStackTrace();
-        }
+    // public void closeWriter(String path)
+    // {
+    //     try 
+    //     {
+    //         writer = new FileWriter(path);
+    //     }
+    //     catch (Exception e)
+    //     {
+    //         e.getStackTrace();
+    //     }
 
-    }
+    // }
 
     public void write(Token t) 
     {
@@ -41,10 +41,10 @@ public class TokenOutput {
     // stream of tokens
 
     // initialize writer if not initialised
-        if (writer == null)
-        {
-            throw new IllegalAccessError("Initialise it fella");
-        }
+        // if (writer == null)
+        // {
+        //     throw new IllegalAccessError("Initialise it fella");
+        // }
 
         String output = t.toString();
 
@@ -77,28 +77,28 @@ public class TokenOutput {
 
     private void printToFile(String tokenName)
     {
-        try 
-        {
-            writer.write(tokenName);
-        }
-        catch (Exception e)
-        {
-            e.getStackTrace();
-        }
+        // try 
+        // {
+        //     writer.write(tokenName);
+        // }
+        // catch (Exception e)
+        // {
+        //     e.getStackTrace();
+        // }
 
         System.out.print(tokenName);
     }
 
     private void newLine()
     {
-        try 
-        {
-            writer.write("/n");
-        }
-        catch (Exception e)
-        {
-            e.getStackTrace();
-        }  
+        // try 
+        // {
+        //     writer.write("/n");
+        // }
+        // catch (Exception e)
+        // {
+        //     e.getStackTrace();
+        // }  
 
         System.out.println();
     }
