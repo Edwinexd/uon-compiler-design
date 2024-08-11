@@ -3,48 +3,9 @@
 public class TokenOutput {
     // resets when you make a newline
     private int writtenCount;
-    //private FileWriter writer;
-
-    /// i feel like the writer opening every time might cause too much overhead
-
-    // public void initializeWriter(String path)
-    // {
-    //     try 
-    //     {
-    //         writer = new FileWriter(path);
-    //     }
-    //     catch (Exception e)
-    //     {
-    //         e.getStackTrace();
-    //     }
-
-    // }
-
-    // public void closeWriter(String path)
-    // {
-    //     try 
-    //     {
-    //         writer = new FileWriter(path);
-    //     }
-    //     catch (Exception e)
-    //     {
-    //         e.getStackTrace();
-    //     }
-
-    // }
 
     public void write(Token t) 
     {
-    // Each line of output, in the absence of errors, will exceed 60 characters in length. Once any
-    // line of output has exceeded 60 characters then you should terminate that output line.
-
-    // stream of tokens
-
-    // initialize writer if not initialised
-        // if (writer == null)
-        // {
-        //     throw new IllegalAccessError("Initialise it fella");
-        // }
 
         String output = t.toString();
 
@@ -56,50 +17,21 @@ public class TokenOutput {
         {
             // same line + append space
             // printToFile
-            printToFile(output);
+            System.out.print(t);
 
             // Incement
             writtenCount += charCount;
         }
         else
         {
-            // new line + append space
-            newLine();
+            System.out.println();
             // printToFile
-            printToFile(output);
+            System.out.print(t);
             // Incement
-            writtenCount += charCount;
+            writtenCount = charCount;
             // will there be a space betwee?
         
         }
 
-    }
-
-    private void printToFile(String tokenName)
-    {
-        // try 
-        // {
-        //     writer.write(tokenName);
-        // }
-        // catch (Exception e)
-        // {
-        //     e.getStackTrace();
-        // }
-
-        System.out.print(tokenName);
-    }
-
-    private void newLine()
-    {
-        // try 
-        // {
-        //     writer.write("/n");
-        // }
-        // catch (Exception e)
-        // {
-        //     e.getStackTrace();
-        // }  
-
-        System.out.println();
     }
 }
