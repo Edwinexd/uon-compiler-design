@@ -1,10 +1,13 @@
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.LinkedList;
 
 public class TokenOutput {
     // resets when you make a newline
     private int writtenCount;
     private FileWriter writer;
+    private int currentLine = 1;
+    private LinkedList<String> errors = new LinkedList<String>();
 
     /// i feel like the writer opening every time might cause too much overhead
 
@@ -13,6 +16,8 @@ public class TokenOutput {
         try 
         {
             writer = new FileWriter(path);
+
+            printToFile(currentLine + ". ");
         }
         catch (Exception e)
         {
@@ -77,12 +82,41 @@ public class TokenOutput {
 
     public void feedChar(char character) throws IOException
     {
-        printToFile(character);
+        if (character == '\n')
+        {
+            //new line
+            printToFile(character);
+
+            // print all errors
+            for (String error : errors) {
+                //ERROR
+                printToFile(error);
+                // new line
+                printToFile(character);
+            }
+
+            if (errors.size() == 0)
+            {
+                // no errors and there be n new lines
+                printToFile(character);
+            }
+
+            // clear errors
+            errors.clear();
+
+            currentLine++;
+
+            printToFile(currentLine + ". ");
+        }
+        else
+        {
+            printToFile(character);
+        }
     }
 
     public void feedError(String error) throws IOException
     {
-        printToFile(error);
+        errors.add(error);
     }
 
     private void printToFile(char character) throws IOException
