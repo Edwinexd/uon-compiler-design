@@ -9,7 +9,7 @@ public class Parser
 
 
     // built after
-    private JTree syntaxTree = new JTree(new SyntaxTreeNode(null));
+    private JTree syntaxTree = new JTree();
 
     private SyntaxTreeNode root = new SyntaxTreeNode(null);
 
@@ -28,7 +28,7 @@ public class Parser
 
 
 
-        
+
     }
 
 
