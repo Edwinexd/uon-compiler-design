@@ -1,5 +1,6 @@
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Scanner;
 import java.io.File;
 import java.io.IOException;
@@ -246,129 +247,6 @@ public class CD24Scanner {
         createToken(type, lexeme, column, 0);
     }
 
-    // TODO: This is stupid
-    private TokenType getIdentifierType(String lexeme) {
-        String lowerd = lexeme.toLowerCase();
-        if (lowerd.equals("cd24")) {
-            return TokenType.TCD24;
-        } else if (lowerd.equals("const")) {
-            return TokenType.TCONS;
-        } else if (lowerd.equals("typedef")) {
-            return TokenType.TTYPD;
-        } else if (lowerd.equals("def")) {
-            return TokenType.TTDEF;
-        } else if (lowerd.equals("arraydef")) {
-            return TokenType.TARRD;
-        } else if (lowerd.equals("main")) {
-            return TokenType.TMAIN;
-        } else if (lowerd.equals("begin")) {
-            return TokenType.TBEGN;
-        } else if (lowerd.equals("end")) {
-            return TokenType.TTEND;
-        } else if (lowerd.equals("array")) {
-            return TokenType.TARAY;
-        } else if (lowerd.equals("tof")) {
-            return TokenType.TTTOF;
-        } else if (lowerd.equals("func")) {
-            return TokenType.TFUNC;
-        } else if (lowerd.equals("void")) {
-            return TokenType.TVOID;
-        } else if (lowerd.equals("const")) {
-            return TokenType.TCNST;
-        } else if (lowerd.equals("int")) {
-            return TokenType.TINTG;
-        } else if (lowerd.equals("float")) {
-            return TokenType.TFLOT;
-        } else if (lowerd.equals("bool")) {
-            return TokenType.TBOOL;
-        } else if (lowerd.equals("for")) {
-            return TokenType.TTFOR;
-        } else if (lowerd.equals("repeat")) {
-            return TokenType.TREPT;
-        } else if (lowerd.equals("until")) {
-            return TokenType.TUNTL;
-        } else if (lowerd.equals("do")) {
-            return TokenType.TTTDO;
-        } else if (lowerd.equals("while")) {
-            return TokenType.TWHIL;
-        } else if (lowerd.equals("if")) {
-            return TokenType.TIFTH;
-        } else if (lowerd.equals("else")) {
-            return TokenType.TELSE;
-        } else if (lowerd.equals("elif")) {
-            return TokenType.TELIF;
-        } else if (lowerd.equals("switch")) {
-            return TokenType.TSWTH;
-        } else if (lowerd.equals("case")) {
-            return TokenType.TCASE;
-        } else if (lowerd.equals("default")) {
-            return TokenType.TDFLT;
-        } else if (lowerd.equals("break")) {
-            return TokenType.TBREK;
-        } else if (lowerd.equals("input")) {
-            return TokenType.TINPT;
-        } else if (lowerd.equals("print")) {
-            return TokenType.TPRNT;
-        } else if (lowerd.equals("printline")) {
-            return TokenType.TPRLN;
-        } else if (lowerd.equals("return")) {
-            return TokenType.TRETN;
-        } else if (lowerd.equals("not")) {
-            return TokenType.TNOTT;
-        } else if (lowerd.equals("and")) {
-            return TokenType.TTAND;
-        } else if (lowerd.equals("or")) {
-            return TokenType.TTTOR;
-        } else if (lowerd.equals("xor")) {
-            return TokenType.TTXOR;
-        } else if (lowerd.equals("true")) {
-            return TokenType.TTRUE;
-        } else if (lowerd.equals("false")) {
-            return TokenType.TFALS;
-        }
-        return TokenType.TIDEN;
-    }
-    
-    private TokenType getTokenTypeOf(char c) {
-        // TODO: Use hashmap (or technically a straight up array could work)
-        if (c == ',') {
-            return TokenType.TCOMA;
-        } else if (c == ';') {
-            return TokenType.TSEMI;
-        } else if (c == '[') {
-            return TokenType.TLBRK;
-        } else if (c == ']') {
-            return TokenType.TRBRK;
-        } else if (c == '(') {
-            return TokenType.TLPAR;
-        } else if (c == ')') {
-            return TokenType.TLBRK;
-        } else if (c == '=') {
-            return TokenType.TEQUL;
-        } else if (c == '+') {
-            return TokenType.TPLUS;
-        } else if (c == '-') {
-            return TokenType.TMINS;
-        } else if (c == '*') {
-            return TokenType.TSTAR;
-        } else if (c == '/') {
-            return TokenType.TDIVD;
-        } else if (c == '%') {
-            return TokenType.TPERC;
-        } else if (c == '^') {
-            return TokenType.TCART;
-        } else if (c == '<') {
-            return TokenType.TLESS;
-        } else if (c == '>') {
-            return TokenType.TGRTR;
-        } else if (c == ':') {
-            return TokenType.TCOLN;
-        } else if (c == '.') {
-            return TokenType.TDOTT;
-        }
-        return null;
-    }
-
     private void tokenizeConsumeDelimiters() {
         if (buffer.length() > 2) {
             for (int i = 0; i < buffer.length()-2; i++) {
@@ -394,36 +272,18 @@ public class CD24Scanner {
             char c1 = buffer.charAt(0);
             char c2 = buffer.charAt(1);
 
-            TokenType tType = null;
-            if (c1 == '<' && c2 == '=') {
-                tType = TokenType.TLEQL;
-            } else if (c1 == '>' && c2 == '=') {
-                tType = TokenType.TGEQL;
-            } else if (c1 == '!' && c2 == '=') {
-                tType = TokenType.TNEQL;
-            } else if (c1 == '=' && c2 == '=') {
-                tType = TokenType.TEQEQ;
-            } else if (c1 == '+' && c2 == '=') {
-                tType = TokenType.TPLEQ;
-            } else if (c1 == '-' && c2 == '=') {
-                tType = TokenType.TMNEQ;
-            } else if (c1 == '*' && c2 == '=') {
-                tType = TokenType.TSTEQ;
-            } else if (c1 == '/' && c2 == '=') {
-                tType = TokenType.TDVEQ;
-            }
-
-            if (tType != null) {
-                createToken(tType, null, currentColumn - buffer.length(), buffer.length());
+            Optional<TokenType> tType = TokenType.fromDelimiter(c1, c2);
+            if (tType.isPresent()) {
+                createToken(tType.get(), null, currentColumn - buffer.length(), buffer.length());
                 buffer.delete(0, 2);
                 continue;
             }
 
             // Couldn't match two characters, trying with one
             char c = buffer.charAt(0);
-            tType = getTokenTypeOf(c);
-            if (tType != null) {
-                createToken(tType, null, currentColumn - buffer.length(), buffer.length());
+            tType = TokenType.fromDelimiter(c);
+            if (tType.isPresent()) {
+                createToken(tType.get(), null, currentColumn - buffer.length(), buffer.length());
                 buffer.deleteCharAt(0);
                 continue;
             } else {
@@ -441,9 +301,9 @@ public class CD24Scanner {
         }
         // Last character
         char c = buffer.charAt(0);
-        TokenType tType = getTokenTypeOf(c);
-        if (tType != null) {
-            createToken(tType, null, currentColumn - buffer.length(), buffer.length());
+        Optional<TokenType> tType = TokenType.fromDelimiter(c);
+        if (tType.isPresent()) {
+            createToken(tType.get(), null, currentColumn - buffer.length(), buffer.length());
             buffer.deleteCharAt(0);
             return;
         }
@@ -463,7 +323,7 @@ public class CD24Scanner {
             return;
         }
         if (mode == Mode.IDENTIFIER) {
-            TokenType type = getIdentifierType(buffer.toString());
+            TokenType type = TokenType.fromIdentifier(buffer.toString());
             createToken(type, type == TokenType.TIDEN ? buffer.toString() : null, currentColumn - buffer.length());
         } else if (mode == Mode.DELIMITER) {
             tokenizeConsumeDelimiters();
