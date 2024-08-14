@@ -63,7 +63,7 @@ public class TokenOutput {
 
         appendNewLine();
         writeText("    ");
-        writeText(t.getError().get());
+        writeText(t.getErrorFormatted().get());
         appendNewLine();
     }
 
