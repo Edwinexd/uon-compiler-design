@@ -1,14 +1,22 @@
+import java.util.Optional;
+
 public class Token {
     private final TokenType type;
     private final String lexeme;
     private final int line;
     private final int column;
+    private final String error;
 
     public Token(TokenType type, String lexeme, int line, int column) {
+        this(type, lexeme, line, column, null);
+    }
+
+    public Token(TokenType type, String lexeme, int line, int column, String error) {
         this.type = type;
         this.lexeme = lexeme;
         this.line = line;
         this.column = column;
+        this.error = error;
     }
 
     public TokenType getType() {
@@ -26,8 +34,11 @@ public class Token {
     public int getColumn() {
         return column;
     }
+
+    public Optional<String> getError() {
+        return Optional.ofNullable(error);
+    }
     
-    // TODO: Check of TUNDF should be handled
     @Override
     public String toString() {
         StringBuilder output = new StringBuilder();
@@ -42,6 +53,7 @@ public class Token {
             output.append(lexeme);
             output.append(" ");
         }
+        output.append(line + ":" + column + " ");
         int remainder = output.length() % 6;
         if (remainder != 0) {
             for (int i = 0; i < 6-remainder; i++) {
