@@ -6,47 +6,43 @@ import java.util.LinkedList;
 public class TokenOutput {
     // resets when you make a newline
     private int writtenCount;
-    private FileWriter errorWriter;
-    private FileWriter tokenWriter;
+    private FileWriter listingFileWriter;
+    private FileWriter tokenOutputWriter;
     private int currentLine = 1;
     private LinkedList<String> errors = new LinkedList<String>();
     private char newlineChar = (char)10;
 
     /// i feel like the writer opening every time might cause too much overhead
 
-    public void initializeWriter(String errorPath, String tokenPath) throws IOException
+    public void initializeWriters(String errorPath, String tokenPath)
     {
         try 
         {
-            errorWriter = new FileWriter(errorPath);
-            tokenWriter = new FileWriter(tokenPath);
+            listingFileWriter = new FileWriter(errorPath);
+            tokenOutputWriter = new FileWriter(tokenPath);
 
-            printErrorToFile(currentLine + ". ");
-        }
-        catch (Exception e)
-        {
-            e.getStackTrace();
+            printToListingFile(currentLine + ". ");
+        } catch (IOException e) {
+            System.err.println("Error initializing writer: " + e.getMessage());
         }
 
     }
 
-    public void closeWriter() throws IOException
+    public void closeWriters()
     {
         try 
         {
-            errorWriter.close();
-            tokenWriter.close();
-        }
-        catch (Exception e)
-        {
-            e.getStackTrace();
+            listingFileWriter.close();
+            tokenOutputWriter.close();
+        } catch (IOException e) {
+            System.err.println("Error closing writer: " + e.getMessage());
         }
 
     }
 
     public void write(Token t) {
         // Must be initialised
-        if (errorWriter == null) {
+        if (listingFileWriter == null) {
             throw new IllegalStateException("Initialise it fella");
         }
 
@@ -70,7 +66,7 @@ public class TokenOutput {
     private void writeText(String text) {
         try {
             System.out.print(text);
-            tokenWriter.write(text);
+            tokenOutputWriter.write(text);
             writtenCount += text.length();
         } catch (IOException e) {
             System.err.println("Error writing to file: " + e.getMessage());
@@ -82,20 +78,20 @@ public class TokenOutput {
         writtenCount = 0;
     }
 
-    public void feedChar(char character) throws IOException
+    public void feedChar(char character)
     {
         // error File output
         if (character == newlineChar)
         {
             //new line
-            printErrorToFile(character);
+            printToListingFile(character);
 
             // print all errors
             for (String error : errors) {
                 //ERROR
-                printErrorToFile(error);
+                printToListingFile(error);
                 // new line
-                printErrorToFile(character);
+                printToListingFile(character);
             }
 
             // clear errors
@@ -103,42 +99,38 @@ public class TokenOutput {
 
             currentLine++;
 
-            printErrorToFile(currentLine + ". ");
+            printToListingFile(currentLine + ". ");
         }
         else
         {
-            printErrorToFile(character);
+            printToListingFile(character);
         }
 
 
     }
 
-    public void feedError(String error) throws IOException
+    public void feedError(String error)
     {
         errors.add(error);
     }
 
-    private void printErrorToFile(char character) throws IOException
+    private void printToListingFile(char character)
     {
         try 
         {
-            errorWriter.write(character);
-        }
-        catch (Exception e)
-        {
-            e.getStackTrace();
+            listingFileWriter.write(character);
+        } catch (IOException e) {
+            System.err.println("Error writing to listing file: " + e.getMessage());
         }
     }
 
-    private void printErrorToFile(String error) throws IOException
+    private void printToListingFile(String error)
     {
         try 
         {
-            errorWriter.write(error);
-        }
-        catch (Exception e)
-        {
-            e.getStackTrace();
+            listingFileWriter.write(error);
+        } catch (IOException e) {
+            System.err.println("Error writing to listing file: " + e.getMessage());
         }
     }
 }

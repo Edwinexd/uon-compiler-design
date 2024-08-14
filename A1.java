@@ -21,10 +21,10 @@ public class A1 {
         // VARIABLE/METHOD/CONST/WHATEVER_NAME => "age" | doThing
         // symbolTable.insertToken(VARIABLE/METHOD/CONST/WHATEVER_NAME, token)
         TokenOutput tokenOutput = new TokenOutput();
-        tokenOutput.initializeWriter("errorOutput.txt", "tokenOutput.txt");
+        tokenOutput.initializeWriters("listingFile.txt", "tokenOutput.txt");
         CD24Scanner scanner = new CD24Scanner(tokenOutput);
         scanner.scan(args[0]);
-        tokenOutput.closeWriter();
+        tokenOutput.closeWriters();
 
 
     }
