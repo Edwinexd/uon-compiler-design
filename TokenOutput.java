@@ -2,6 +2,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.LinkedList;
 
+// TODO: Clean up
 public class TokenOutput {
     // resets when you make a newline
     private int writtenCount;
@@ -43,47 +44,42 @@ public class TokenOutput {
 
     }
 
-    public void write(Token t) throws IOException
-    {
+    public void write(Token t) {
+        // Must be initialised
+        if (errorWriter == null) {
+            throw new IllegalStateException("Initialise it fella");
+        }
+
         // Each line of output, in the absence of errors, will exceed 60 characters in length. Once any
         // line of output has exceeded 60 characters then you should terminate that output line.
+        if (writtenCount > 60) {
+            appendNewLine();
+        }
+        writeText(t.toString());
 
-        // stream of tokens
-
-        // initialize writer if not initialised
-        if (errorWriter == null)
-        {
-            throw new IllegalAccessError("Initialise it fella");
+        if (t.getType() != TokenType.TUNDF) {
+            return;
         }
 
-        String output = t.toString();
+        appendNewLine();
+        writeText("    ");
+        writeText(t.getError().get());
+        appendNewLine();
+    }
 
-        int charCount = output.length();
-
-
-        // + 6 because according to the spec the lexeme should not wrap and it only matters that the token is in the 60 limit
-        if ((writtenCount + 6) < 60 && t.getType() != TokenType.TUNDF)
-        {
-            // same line + append space
-            // printToFile
-            System.out.print(t.toString());
-            printTokenToFile(t, false);
-
-            // Incement
-            writtenCount += charCount;
+    private void writeText(String text) {
+        try {
+            System.out.print(text);
+            tokenWriter.write(text);
+            writtenCount += text.length();
+        } catch (IOException e) {
+            System.err.println("Error writing to file: " + e.getMessage());
         }
-        else
-        {
-            // new line 
-            System.out.print(newlineChar);
-            System.out.print(t.toString());
-            // printToFile
-            printTokenToFile(t, true);
+    }
 
-            // Incement
-            writtenCount = charCount;
-        }
-
+    private void appendNewLine() {
+        writeText("\n");
+        writtenCount = 0;
     }
 
     public void feedChar(char character) throws IOException
@@ -139,26 +135,6 @@ public class TokenOutput {
         try 
         {
             errorWriter.write(error);
-        }
-        catch (Exception e)
-        {
-            e.getStackTrace();
-        }
-    }
-
-    private void printTokenToFile(Token token, boolean newline) throws IOException
-    {
-        try 
-        {
-            if (newline) 
-            {
-                tokenWriter.write(newlineChar);
-                tokenWriter.write(token.toString());
-            }
-            else
-            {
-                tokenWriter.write(token.toString());
-            }
         }
         catch (Exception e)
         {
