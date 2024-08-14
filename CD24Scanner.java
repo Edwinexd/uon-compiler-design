@@ -65,6 +65,10 @@ public class CD24Scanner {
         // string, .... " | eol
         if (Character.isAlphabetic(c)) {
             if (Mode.isComment(mode)) {
+                // Reset any "progress" towards ending the block comment
+                if (mode == Mode.BLOCKCOMMENT && buffer.length() > 0) {
+                    buffer.delete(0, buffer.length());
+                }
                 return;
             }
             if (mode == Mode.UNKNOWN || mode == Mode.INVALID) {
@@ -86,6 +90,10 @@ public class CD24Scanner {
             System.out.println("No action for mode, alphabetic: " + mode);
         } else if (Character.isDigit(c)) {
             if (Mode.isComment(mode)) {
+                // Reset any "progress" towards ending the block comment
+                if (mode == Mode.BLOCKCOMMENT && buffer.length() > 0) {
+                    buffer.delete(0, buffer.length());
+                }
                 return;
             }
             if (mode == Mode.IDENTIFIER || mode == Mode.STRING) {
@@ -109,6 +117,10 @@ public class CD24Scanner {
                 return;
             }
             if (Mode.isComment(mode)) {
+                // Reset any "progress" towards ending the block comment
+                if (mode == Mode.BLOCKCOMMENT && buffer.length() > 0) {
+                    buffer.delete(0, buffer.length());
+                }
                 return;
             }
             if (mode == Mode.UNKNOWN && c != '\n') {
@@ -172,6 +184,11 @@ public class CD24Scanner {
         } else if (c == 13) {
             // Fuck windows
         } else if (c == '"') {
+            // Reset any "progress" towards ending the block comment
+            if (mode == Mode.BLOCKCOMMENT && buffer.length() > 0) {
+                buffer.delete(0, buffer.length());
+            }
+
             if (mode != Mode.STRING && !Mode.isComment(mode)) {
                 tokenizeBuffer();
                 buffer.append(c);
@@ -187,6 +204,10 @@ public class CD24Scanner {
         }
         else {
             if (Mode.isComment(mode)) {
+                // Reset any "progress" towards ending the block comment
+                if (mode == Mode.BLOCKCOMMENT && buffer.length() > 0) {
+                    buffer.delete(0, buffer.length());
+                }
                 return; // Ignored
             } else if (mode == Mode.STRING) {
                 buffer.append(c);
