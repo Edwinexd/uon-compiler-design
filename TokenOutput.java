@@ -5,19 +5,22 @@ import java.util.LinkedList;
 public class TokenOutput {
     // resets when you make a newline
     private int writtenCount;
-    private FileWriter writer;
+    private FileWriter errorWriter;
+    private FileWriter tokenWriter;
     private int currentLine = 1;
     private LinkedList<String> errors = new LinkedList<String>();
+    private char newlineChar = (char)10;
 
     /// i feel like the writer opening every time might cause too much overhead
 
-    public void initializeWriter(String path) throws IOException
+    public void initializeWriter(String errorPath, String tokenPath) throws IOException
     {
         try 
         {
-            writer = new FileWriter(path);
+            errorWriter = new FileWriter(errorPath);
+            tokenWriter = new FileWriter(tokenPath);
 
-            printToFile(currentLine + ". ");
+            printErrorToFile(currentLine + ". ");
         }
         catch (Exception e)
         {
@@ -30,7 +33,8 @@ public class TokenOutput {
     {
         try 
         {
-            writer.close();
+            errorWriter.close();
+            tokenWriter.close();
         }
         catch (Exception e)
         {
@@ -39,7 +43,7 @@ public class TokenOutput {
 
     }
 
-    public void write(Token t) 
+    public void write(Token t) throws IOException
     {
         // Each line of output, in the absence of errors, will exceed 60 characters in length. Once any
         // line of output has exceeded 60 characters then you should terminate that output line.
@@ -47,7 +51,7 @@ public class TokenOutput {
         // stream of tokens
 
         // initialize writer if not initialised
-        if (writer == null)
+        if (errorWriter == null)
         {
             throw new IllegalAccessError("Initialise it fella");
         }
@@ -58,41 +62,44 @@ public class TokenOutput {
 
 
         // + 6 because according to the spec the lexeme should not wrap and it only matters that the token is in the 60 limit
-        if ((writtenCount + 6) < 60)
+        if ((writtenCount + 6) < 60 && t.getType() != TokenType.TUNDF)
         {
             // same line + append space
             // printToFile
-            System.out.print(t);
+            System.out.print(t.toString());
+            printTokenToFile(t, false);
 
             // Incement
             writtenCount += charCount;
         }
         else
         {
-            // new line + append space
-            System.out.println();
+            // new line 
+            System.out.print(newlineChar);
+            System.out.print(t.toString());
             // printToFile
-            System.out.print(t);
+            printTokenToFile(t, true);
+
             // Incement
             writtenCount = charCount;
-            // will there be a space between
         }
 
     }
 
     public void feedChar(char character) throws IOException
     {
-        if (character == '\n')
+        // error File output
+        if (character == newlineChar)
         {
             //new line
-            printToFile(character);
+            printErrorToFile(character);
 
             // print all errors
             for (String error : errors) {
                 //ERROR
-                printToFile(error);
+                printErrorToFile(error);
                 // new line
-                printToFile(character);
+                printErrorToFile(character);
             }
 
             // clear errors
@@ -100,12 +107,14 @@ public class TokenOutput {
 
             currentLine++;
 
-            printToFile(currentLine + ". ");
+            printErrorToFile(currentLine + ". ");
         }
         else
         {
-            printToFile(character);
+            printErrorToFile(character);
         }
+
+
     }
 
     public void feedError(String error) throws IOException
@@ -113,11 +122,11 @@ public class TokenOutput {
         errors.add(error);
     }
 
-    private void printToFile(char character) throws IOException
+    private void printErrorToFile(char character) throws IOException
     {
         try 
         {
-            writer.write(character);
+            errorWriter.write(character);
         }
         catch (Exception e)
         {
@@ -125,11 +134,31 @@ public class TokenOutput {
         }
     }
 
-    private void printToFile(String error) throws IOException
+    private void printErrorToFile(String error) throws IOException
     {
         try 
         {
-            writer.write(error);
+            errorWriter.write(error);
+        }
+        catch (Exception e)
+        {
+            e.getStackTrace();
+        }
+    }
+
+    private void printTokenToFile(Token token, boolean newline) throws IOException
+    {
+        try 
+        {
+            if (newline) 
+            {
+                tokenWriter.write(newlineChar);
+                tokenWriter.write(token.toString());
+            }
+            else
+            {
+                tokenWriter.write(token.toString());
+            }
         }
         catch (Exception e)
         {
