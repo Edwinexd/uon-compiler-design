@@ -30,3 +30,5 @@ output.txt
 errorOutput.txt
 tokenOutput.txt
 listingFile.txt
+*.txt
+*.lst

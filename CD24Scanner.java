@@ -10,7 +10,7 @@ public class CD24Scanner {
     private int currentColumn = 1;
     private StringBuffer buffer = new StringBuffer();
     // Since we only create one TUNDF for chaines of invalid characters
-    // we store them in a single buffer and flush it before creating the next valid token
+    // we store them in a single buffer and flush it before creating the next valid token or when hitting a newline
     private StringBuffer invalidBuffer = new StringBuffer();
     private List<Token> tokens = new LinkedList<>();
     private Mode mode = Mode.UNKNOWN;
@@ -49,6 +49,7 @@ public class CD24Scanner {
     }
 
     private void handleChar(char c) {
+        // Just for self-reference to initially understand the logic
         // 1
         // numeric
         // ;
@@ -177,7 +178,7 @@ public class CD24Scanner {
             System.out.println("No action for mode, delimiter: " + mode);
             
         } else if (c == 13) {
-            // Fuck windows
+            // Screw windows carriage return
         } else if (c == '"') {
             // Reset any "progress" towards ending the block comment
             if (mode == Mode.BLOCKCOMMENT && buffer.length() > 0) {
@@ -279,6 +280,7 @@ public class CD24Scanner {
         createToken(type, lexeme, column, 0, error);
     }
 
+    // TODO: Logic for handling 1-delimiters should be reused instead of being coded twice
     private void tokenizeConsumeDelimiters() {
         if (buffer.length() > 2) {
             for (int i = 0; i < buffer.length()-2; i++) {
@@ -388,7 +390,7 @@ public class CD24Scanner {
                 createToken(TokenType.TUNDF, buffer.toString(), currentColumn - buffer.length(), "lexical error: numeric literal overflow");
             }
         } else if (mode == Mode.STRING) {
-            // skipping first and last character for lexeme
+            // skipping first and last character for lexeme (since they will always be ")
             createToken(TokenType.TSTRG, buffer.substring(1, buffer.length()-1), currentColumn - buffer.length());
         } else if (mode == Mode.INVALID) {
             // Explicitly requesting to tokenize invalid buffer
