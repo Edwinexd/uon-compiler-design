@@ -111,7 +111,7 @@ public class CD24Scanner {
             if (Mode.isComment(mode)) {
                 return;
             }
-            if (mode == Mode.UNKNOWN) {
+            if (mode == Mode.UNKNOWN && c != '\n') {
                 return;
             }
             if (mode == Mode.STRING && c != '\n') {
@@ -123,8 +123,9 @@ public class CD24Scanner {
                 tokenizeBuffer();
                 return;
             }
-            if (mode == Mode.IDENTIFIER || mode == Mode.NUMEIRC || mode == Mode.FLOAT || mode == Mode.DELIMITER || mode == Mode.INVALID) {
-                tokenizeBuffer();
+            if (mode == Mode.IDENTIFIER || mode == Mode.NUMEIRC || mode == Mode.FLOAT || mode == Mode.DELIMITER || mode == Mode.INVALID || mode == Mode.UNKNOWN) {
+                boolean isNewLine = c == '\n';
+                tokenizeBuffer(isNewLine);
                 return;
             }
             System.out.println("No action for mode, whitespace: " + mode);
@@ -229,14 +230,11 @@ public class CD24Scanner {
         if (invalidBuffer.length() == 0) {
             return;
         }
-        // if (invalidBuffer.toString().equals("!!####")) {
-            // throw new IllegalArgumentException("Debug");
-        // }
-        // TODO: This column handling is not correct, unterminated strings returns TUNDF8:-30
         Token t = new Token(TokenType.TUNDF, invalidBuffer.toString(), currentLine, currentColumn - invalidBuffer.length() - tentativeOffset, "lexical error");
         tokens.add(t);
         tokenOutput.write(t);
         invalidBuffer.delete(0, invalidBuffer.length());
+        tokenOutput.feedError(t.getErrorFormatted().get());
     }
 
     private void tokenizeInvalid() {
@@ -249,6 +247,9 @@ public class CD24Scanner {
         // System.out.println(t);
         tokens.add(t);
         tokenOutput.write(t);
+        if (error != null) {
+            tokenOutput.feedError(t.getErrorFormatted().get());
+        }
     }
 
     private void createToken(TokenType type, String lexeme, int column) {
@@ -331,7 +332,7 @@ public class CD24Scanner {
         }
     }
 
-    private void tokenizeBuffer() {
+    private void tokenizeBuffer(boolean forceDumpErrorBuffer) {
         // When we have reached a differnt type of characters and need to tokenize
         // whatever is in the buffer before continuing
         Mode oldMode = mode;
@@ -395,5 +396,14 @@ public class CD24Scanner {
         if (mode == oldMode) {
             mode = Mode.UNKNOWN;
         }
+
+        // Used to force dump the error buffer for e.x. newline characters as tokens don't flow between lines
+        if (forceDumpErrorBuffer) {
+            tokenizeInvalid();
+        }
+    }
+
+    private void tokenizeBuffer() {
+        tokenizeBuffer(false);
     }
 }

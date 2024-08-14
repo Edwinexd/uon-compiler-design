@@ -10,7 +10,7 @@ CD24 a1
 main
     variable:==: int
 begin
-    printline "Hello World!
+    printline "Hello World!"
     /-- Why is this double undf? ...
     printline "Bad string :)
     /-- Exploding int error

@@ -89,7 +89,7 @@ public class TokenOutput {
             // print all errors
             for (String error : errors) {
                 //ERROR
-                printToListingFile(error);
+                printToListingFile("    " + error);
                 // new line
                 printToListingFile(character);
             }
