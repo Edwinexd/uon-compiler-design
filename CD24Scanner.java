@@ -5,11 +5,6 @@ import java.util.Scanner;
 import java.io.File;
 import java.io.IOException;
 
-// TODO: listing file not created!
-// TODO: Column numbers are incorrect
-// TODO: currentLine and currentColumn are not updated at all
-// 
-
 public class CD24Scanner {
     private int currentLine = 1;
     private int currentColumn = 1;
@@ -265,7 +260,6 @@ public class CD24Scanner {
     private void createToken(TokenType type, String lexeme, int column, int tentativeOffset, String error) {
         tokenizeInvalid(tentativeOffset);
         Token t = new Token(type, lexeme, currentLine, column, error);
-        // System.out.println(t);
         tokens.add(t);
         tokenOutput.write(t);
         if (error != null) {
@@ -395,7 +389,6 @@ public class CD24Scanner {
             }
         } else if (mode == Mode.STRING) {
             // skipping first and last character for lexeme
-            // TODO: This is off by one for some reason
             createToken(TokenType.TSTRG, buffer.substring(1, buffer.length()-1), currentColumn - buffer.length());
         } else if (mode == Mode.INVALID) {
             // Explicitly requesting to tokenize invalid buffer
@@ -408,7 +401,7 @@ public class CD24Scanner {
         } else if (mode == Mode.EOF) {
             createToken(TokenType.TTEOF, null, 0);
         } else {
-            throw new RuntimeException("Invalid mode " + mode + " for tokenizing buffer, not implemented or not applicable!");
+            throw new RuntimeException("Invalid mode " + mode + " for tokenizing buffer, not implemented!");
         }
 
         buffer.delete(0, buffer.length());

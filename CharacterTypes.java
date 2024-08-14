@@ -19,12 +19,14 @@ public class CharacterTypes {
             c == ':' || 
             c == '.' || 
             c == ' ' || 
+            c == '\t' ||
             c == '\n';
     }
 
     public static boolean isWhitespace(char c) {
         return 
         c == ' ' || 
+        c == '\t' ||
         c == '\n';
     }
 }
