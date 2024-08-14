@@ -1,12 +1,31 @@
+/-- Bunch of keywords, none of these should explode
+CD24 constants typedef def arraydef main begin end 
+array of func void const int float bool for repeat 
+until do while if else elif switch case break default 
+input print printline return not and or xor true false
+/-- Something that explodes so we get a newline
+#
+
 CD24 a1
 main
     variable:==: int
 begin
-    printline "Hello World!"
+    printline "Hello World!
+    /-- Why is this double undf? ...
+    printline "Bad string :)
+    /-- Exploding int error
+    999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999
+    /-- Exploding float error
+    999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999.1
+    /-- Non-explosive int
     10
+    /-- Non-explosive float
     1.10
+    /-- int + dot
+    1.
     += 1.551251251512512
     !=!!!!=!!####!
+    /-- !!!!!!
     =/--= Hello world
     /** fuckin hell
 

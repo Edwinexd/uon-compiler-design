@@ -6,6 +6,7 @@ public enum Mode {
     STRING,
     DELIMITER,
     INVALID,
+    INVALID_STRING, // it's own thing as it has a special error format
     LINECOMMENT,
     BLOCKCOMMENT,
     EOF;

@@ -14,7 +14,7 @@ public enum TokenType {
     TTEOF(0),
     // The 38 keywords
     TCD24(1, "cd24"),
-    TCONS(2, "const"),
+    TCONS(2, "constants"),
     TTYPD(3, "typedef"),
     TTDEF(4, "def"),
     TARRD(5, "arraydef"),
@@ -128,7 +128,7 @@ public enum TokenType {
     }
 
     public static TokenType fromIdentifier(String keyword) {
-        TokenType t = Mappings.keywordMap.get(keyword);
+        TokenType t = Mappings.keywordMap.get(keyword.toLowerCase());
         if (t == null) {
             return TIDEN;
         }
