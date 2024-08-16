@@ -10,7 +10,8 @@ public class CD24Scanner {
     private int currentColumn = 1;
     private StringBuffer buffer = new StringBuffer();
     // Since we only create one TUNDF for chaines of invalid characters
-    // we store them in a single buffer and flush it before creating the next valid token or when hitting a newline
+    // we store them in a single buffer and flush it before creating the next valid
+    // token or when hitting a newline
     private StringBuffer invalidBuffer = new StringBuffer();
     private List<Token> tokens = new LinkedList<>();
     private Mode mode = Mode.UNKNOWN;
@@ -131,7 +132,8 @@ public class CD24Scanner {
                 tokenizeBuffer();
                 return;
             }
-            if (mode == Mode.IDENTIFIER || mode == Mode.NUMEIRC || mode == Mode.FLOAT || mode == Mode.DELIMITER || mode == Mode.INVALID || mode == Mode.UNKNOWN) {
+            if (mode == Mode.IDENTIFIER || mode == Mode.NUMEIRC || mode == Mode.FLOAT || mode == Mode.DELIMITER
+                    || mode == Mode.INVALID || mode == Mode.UNKNOWN) {
                 boolean isNewLine = c == '\n';
                 tokenizeBuffer(isNewLine);
                 return;
@@ -167,7 +169,8 @@ public class CD24Scanner {
                 buffer.append(c);
                 return;
             } else if (mode == Mode.UNKNOWN || mode == Mode.INVALID) {
-                // We don't tokenize immediatly if it is ! as it may be part of a large invalid lexeme in the current context
+                // We don't tokenize immediatly if it is ! as it may be part of a large invalid
+                // lexeme in the current context
                 if (c != '!') {
                     tokenizeBuffer();
                 }
@@ -176,7 +179,7 @@ public class CD24Scanner {
                 return;
             }
             System.out.println("No action for mode, delimiter: " + mode);
-            
+
         } else if (c == 13) {
             // Screw windows carriage return
         } else if (c == '"') {
@@ -197,8 +200,7 @@ public class CD24Scanner {
                 tokenizeBuffer();
             }
             return;
-        }
-        else {
+        } else {
             if (Mode.isComment(mode)) {
                 // Reset any "progress" towards ending the block comment
                 if (mode == Mode.BLOCKCOMMENT && buffer.length() > 0) {
@@ -247,7 +249,8 @@ public class CD24Scanner {
         if (invalidBuffer.length() == 0) {
             return;
         }
-        Token t = new Token(TokenType.TUNDF, invalidBuffer.toString(), currentLine, currentColumn - invalidBuffer.length() - tentativeOffset, "lexical error");
+        Token t = new Token(TokenType.TUNDF, invalidBuffer.toString(), currentLine,
+                currentColumn - invalidBuffer.length() - tentativeOffset, "lexical error");
         tokens.add(t);
         tokenOutput.write(t);
         invalidBuffer.delete(0, invalidBuffer.length());
@@ -275,18 +278,19 @@ public class CD24Scanner {
     private void createToken(TokenType type, String lexeme, int column, int tentativeOffset) {
         createToken(type, lexeme, column, tentativeOffset, null);
     }
-    
+
     private void createToken(TokenType type, String lexeme, int column, String error) {
         createToken(type, lexeme, column, 0, error);
     }
 
-    // TODO: Logic for handling 1-delimiters should be reused instead of being coded twice
+    // TODO: Logic for handling 1-delimiters should be reused instead of being coded
+    // twice
     private void tokenizeConsumeDelimiters() {
         if (buffer.length() > 2) {
-            for (int i = 0; i < buffer.length()-2; i++) {
+            for (int i = 0; i < buffer.length() - 2; i++) {
                 char c1 = buffer.charAt(i);
-                char c2 = buffer.charAt(i+1);
-                char c3 = buffer.charAt(i+2);
+                char c2 = buffer.charAt(i + 1);
+                char c3 = buffer.charAt(i + 2);
                 if (c1 == '/' && c2 == '-' && c3 == '-') {
                     // Line comment
                     mode = Mode.LINECOMMENT;
@@ -302,7 +306,8 @@ public class CD24Scanner {
         }
 
         while (buffer.length() > 1) {
-            // Taking first two characters and trying to match them to a delimiter / operator
+            // Taking first two characters and trying to match them to a delimiter /
+            // operator
             char c1 = buffer.charAt(0);
             char c2 = buffer.charAt(1);
 
@@ -342,7 +347,8 @@ public class CD24Scanner {
             return;
         }
         feedInvalid(c);
-        // If we entred a comment mode, invalid characters should be tokenized immediately
+        // If we entred a comment mode, invalid characters should be tokenized
+        // immediately
         // and not "overflow" to after the comment
         if (Mode.isComment(mode)) {
             tokenizeInvalid();
@@ -362,22 +368,24 @@ public class CD24Scanner {
         } else if (mode == Mode.DELIMITER) {
             tokenizeConsumeDelimiters();
         } else if (mode == Mode.FLOAT) {
-            if (buffer.charAt(buffer.length()-1) == '.') {
+            if (buffer.charAt(buffer.length() - 1) == '.') {
                 // Not a float, ended with a dot so will correspond to two tokens
                 // int + dot
-                String intLexeme = buffer.substring(0, buffer.length()-1);
+                String intLexeme = buffer.substring(0, buffer.length() - 1);
                 try {
                     Integer.parseInt(intLexeme);
                     createToken(TokenType.TILIT, intLexeme, currentColumn - buffer.length());
                 } catch (NumberFormatException e) {
-                    createToken(TokenType.TUNDF, intLexeme, currentColumn - buffer.length(), "lexical error: numeric literal overflow");
+                    createToken(TokenType.TUNDF, intLexeme, currentColumn - buffer.length(),
+                            "lexical error: numeric literal overflow");
                 }
-                createToken(TokenType.TDOTT, null, currentColumn - (buffer.length()-intLexeme.length()));
+                createToken(TokenType.TDOTT, null, currentColumn - (buffer.length() - intLexeme.length()));
             } else {
                 Double d = Double.parseDouble(buffer.toString());
                 // I.e. overflow
                 if (d.isInfinite()) {
-                    createToken(TokenType.TUNDF, buffer.toString(), currentColumn - buffer.length(), "lexical error: numeric literal overflow");
+                    createToken(TokenType.TUNDF, buffer.toString(), currentColumn - buffer.length(),
+                            "lexical error: numeric literal overflow");
                 } else {
                     createToken(TokenType.TFLIT, buffer.toString(), currentColumn - buffer.length());
                 }
@@ -387,11 +395,12 @@ public class CD24Scanner {
                 Integer.parseInt(buffer.toString());
                 createToken(TokenType.TILIT, buffer.toString(), currentColumn - buffer.length());
             } catch (NumberFormatException e) {
-                createToken(TokenType.TUNDF, buffer.toString(), currentColumn - buffer.length(), "lexical error: numeric literal overflow");
+                createToken(TokenType.TUNDF, buffer.toString(), currentColumn - buffer.length(),
+                        "lexical error: numeric literal overflow");
             }
         } else if (mode == Mode.STRING) {
             // skipping first and last character for lexeme (since they will always be ")
-            createToken(TokenType.TSTRG, buffer.substring(1, buffer.length()-1), currentColumn - buffer.length());
+            createToken(TokenType.TSTRG, buffer.substring(1, buffer.length() - 1), currentColumn - buffer.length());
         } else if (mode == Mode.INVALID) {
             // Explicitly requesting to tokenize invalid buffer
             // to keep everything consistent, buffer is invalidated i.e.
@@ -399,7 +408,8 @@ public class CD24Scanner {
             invalidateBuffer();
             tokenizeInvalid();
         } else if (mode == Mode.INVALID_STRING) {
-            createToken(TokenType.TUNDF, buffer.toString(), currentColumn - buffer.length(), "lexical error: unterminated string");
+            createToken(TokenType.TUNDF, buffer.toString(), currentColumn - buffer.length(),
+                    "lexical error: unterminated string");
         } else if (mode == Mode.EOF) {
             createToken(TokenType.TTEOF, null, 0);
         } else {
@@ -413,7 +423,8 @@ public class CD24Scanner {
             mode = Mode.UNKNOWN;
         }
 
-        // Used to force dump the error buffer for e.x. newline characters as tokens don't flow between lines
+        // Used to force dump the error buffer for e.x. newline characters as tokens
+        // don't flow between lines
         if (forceDumpErrorBuffer) {
             tokenizeInvalid();
         }

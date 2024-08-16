@@ -7,7 +7,7 @@ class Mappings {
     protected static final HashMap<Character, TokenType> singleCharDelimiterMap = new HashMap<>();
     protected static final HashMap<Character, HashMap<Character, TokenType>> twoCharDelimiterMap = new HashMap<>();
     protected static final HashMap<String, TokenType> keywordMap = new HashMap<>();
-} 
+}
 
 public enum TokenType {
     // Token value for end of file
@@ -95,7 +95,7 @@ public enum TokenType {
         Mappings.keywordMap.put(keyword.toLowerCase(), this);
     }
 
-    TokenType(int value, char ... delimiterChars) {
+    TokenType(int value, char... delimiterChars) {
         this(value);
         if (delimiterChars.length > 2) {
             throw new IllegalArgumentException("DelimiterChars must be of length 2 or less");
@@ -112,7 +112,7 @@ public enum TokenType {
         return value;
     }
 
-    public static Optional<TokenType> fromDelimiter(char ... delimiterChars) {
+    public static Optional<TokenType> fromDelimiter(char... delimiterChars) {
         if (delimiterChars.length > 2) {
             throw new IllegalArgumentException("DelimiterChars must be of length 2 or less");
         }

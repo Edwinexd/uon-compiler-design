@@ -2,22 +2,19 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.LinkedList;
 
-// TODO: Clean up
 public class TokenOutput {
     // resets when you make a newline
+    private static final char NEWLINE_CHAR = (char) 10;
     private int writtenCount;
     private FileWriter listingFileWriter;
     private FileWriter tokenOutputWriter;
     private int currentLine = 1;
     private LinkedList<String> errors = new LinkedList<String>();
-    private char newlineChar = (char)10;
 
     /// i feel like the writer opening every time might cause too much overhead
 
-    public void initializeWriters(String errorPath, String tokenPath)
-    {
-        try 
-        {
+    public void initializeWriters(String errorPath, String tokenPath) {
+        try {
             listingFileWriter = new FileWriter(errorPath);
             tokenOutputWriter = new FileWriter(tokenPath);
 
@@ -25,19 +22,15 @@ public class TokenOutput {
         } catch (IOException e) {
             System.err.println("Error initializing writer: " + e.getMessage());
         }
-
     }
 
-    public void closeWriters()
-    {
-        try 
-        {
+    public void closeWriters() {
+        try {
             listingFileWriter.close();
             tokenOutputWriter.close();
         } catch (IOException e) {
             System.err.println("Error closing writer: " + e.getMessage());
         }
-
     }
 
     public void write(Token t) {
@@ -46,11 +39,14 @@ public class TokenOutput {
             throw new IllegalStateException("Initialise it fella");
         }
 
-        // Each line of output, in the absence of errors, will exceed 60 characters in length. Once any
-        // line of output has exceeded 60 characters then you should terminate that output line.
+        // Each line of output, in the absence of errors, will exceed 60 characters in
+        // length. Once any
+        // line of output has exceeded 60 characters then you should terminate that
+        // output line.
         if (writtenCount > 60) {
             appendNewLine();
         }
+
         writeText(t.toString());
 
         if (t.getType() != TokenType.TUNDF) {
@@ -78,56 +74,42 @@ public class TokenOutput {
         writtenCount = 0;
     }
 
-    public void feedChar(char character)
-    {
-        // error File output
-        if (character == newlineChar)
-        {
-            //new line
+    public void feedChar(char character) {
+        if (character == NEWLINE_CHAR) {
             printToListingFile(character);
 
-            // print all errors
+            // printing errors
             for (String error : errors) {
-                //ERROR
                 printToListingFile("    " + error);
                 // new line
                 printToListingFile(character);
             }
 
-            // clear errors
+            // clear error buffer
             errors.clear();
 
             currentLine++;
 
             printToListingFile(currentLine + ". ");
-        }
-        else
-        {
+        } else {
             printToListingFile(character);
         }
-
-
     }
 
-    public void feedError(String error)
-    {
+    public void feedError(String error) {
         errors.add(error);
     }
 
-    private void printToListingFile(char character)
-    {
-        try 
-        {
+    private void printToListingFile(char character) {
+        try {
             listingFileWriter.write(character);
         } catch (IOException e) {
             System.err.println("Error writing to listing file: " + e.getMessage());
         }
     }
 
-    private void printToListingFile(String error)
-    {
-        try 
-        {
+    private void printToListingFile(String error) {
+        try {
             listingFileWriter.write(error);
         } catch (IOException e) {
             System.err.println("Error writing to listing file: " + e.getMessage());

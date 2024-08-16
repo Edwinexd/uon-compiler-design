@@ -45,7 +45,7 @@ public class Token {
         }
         return Optional.of(error + " " + lexeme + " (line " + line + ", column " + column + ")");
     }
-    
+
     @Override
     public String toString() {
         StringBuilder output = new StringBuilder();
@@ -62,7 +62,7 @@ public class Token {
         }
         int remainder = output.length() % 6;
         if (remainder != 0) {
-            for (int i = 0; i < 6-remainder; i++) {
+            for (int i = 0; i < 6 - remainder; i++) {
                 output.append(" ");
             }
         }

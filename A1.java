@@ -15,6 +15,5 @@ public class A1 {
         scanner.scan(args[0]);
         tokenOutput.closeWriters();
 
-
     }
 }
