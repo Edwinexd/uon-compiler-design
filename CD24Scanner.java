@@ -84,7 +84,12 @@ public class CD24Scanner {
                 buffer.append(c);
                 return;
             }
-            System.out.println("No action for mode, alphabetic: " + mode);
+            if (mode == Mode.NUMEIRC || mode == Mode.FLOAT) {
+                tokenizeBuffer();
+                mode = Mode.IDENTIFIER;
+                buffer.append(c);
+                return;
+            }
         } else if (Character.isDigit(c)) {
             if (Mode.isComment(mode)) {
                 // Reset any "progress" towards ending the block comment
