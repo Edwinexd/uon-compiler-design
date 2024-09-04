@@ -345,7 +345,45 @@ public class Parser
     }
 
     private void arrays() {
-        
+        if (tokenList.peek().getType() == TokenType.TARRD) {
+            arrdecls();
+            return;
+        }
+        // Critical error, this function should not have been called
+    }
+
+    private void arrdecls() {
+        arrdecl();
+        arrdeclstail();
+    }
+
+    private void arrdeclstail() {
+        if (tokenList.peek().getType() == TokenType.TCOMA) {
+            tokenList.pop();
+            arrdecl();
+            arrdeclstail();
+        }
+        // this is an epsilon production
+    }
+
+    private void arrdecl() {
+        Token idToken = tokenList.pop();
+        if (idToken.getType() != TokenType.TIDEN) {
+            // Critical error
+            return;
+        }
+        if (tokenList.peek().getType() != TokenType.TCOLN) {
+            // Critical error
+            return;
+        }
+        tokenList.pop(); // dont care about colon keyword just has to be there
+        if (tokenList.peek().getType() != TokenType.TIDEN) {
+            // Critical error
+            return;
+        }
+        Token idToken2 = tokenList.pop();
+        // TODO Build tree node which will consist of idToken node and idToken2 node
+
     }
 
     private void functions() {
