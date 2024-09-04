@@ -118,10 +118,10 @@ public class Parser
 
     public void InitiateParsing()
     {
-        programParse();
+        var SyntaxTree = programParse();
     }
 
-    private void programParse()
+    private SyntaxTreeNode programParse()
     {
         Token token = tokenList.pop();
         Token lookAhead = tokenList.peek();
@@ -153,7 +153,7 @@ public class Parser
 
     }
 
-    private void globals() {
+    private SyntaxTreeNode globals() {
         if (tokenList.peek().getType() == TokenType.TCONS) {
             consts();
         }
@@ -166,7 +166,7 @@ public class Parser
 
     }
 
-    private void consts() {
+    private SyntaxTreeNode consts() {
         Token token = tokenList.pop();
         if (token.getType() == TokenType.TCONS) {
             initlist();
@@ -175,12 +175,12 @@ public class Parser
         // Critical error, this function should not have been called
     }
 
-    private void initlist() {
+    private SyntaxTreeNode initlist() {
         init();
         initlisttail();
     }
 
-    private void initlisttail() {
+    private SyntaxTreeNode initlisttail() {
         if (tokenList.peek().getType() == TokenType.TCOMA) {
             tokenList.pop();
             init();
@@ -188,7 +188,7 @@ public class Parser
         }
     }
 
-    private void init() {
+    private SyntaxTreeNode init() {
         // pop the id token
         Token idToken = tokenList.pop();
         if (idToken.getType() != TokenType.TIDEN) {
@@ -208,7 +208,7 @@ public class Parser
 
     }
 
-    private void types() {
+    private SyntaxTreeNode types() {
         Token token = tokenList.pop();
         if (token.getType() == TokenType.TTYPD) {
             typelist();
@@ -217,12 +217,12 @@ public class Parser
         // Critical error, this function should not have been called
     }
 
-    private void typelist() {
+    private SyntaxTreeNode typelist() {
         type();
         typelisttail();
     }
 
-    private void typelisttail() {
+    private SyntaxTreeNode typelisttail() {
         if (tokenList.peek().getType() == TokenType.TIDEN) {
             type();
             typelisttail();
@@ -230,13 +230,13 @@ public class Parser
         // this is an epsilon production
     }
 
-    private void type() {
+    private SyntaxTreeNode type() {
         // TODO: If structid or if typeid, call the correct function
         typestruct();
         typetype();
     }
 
-    private void typestruct() {
+    private SyntaxTreeNode typestruct() {
         Token idToken = tokenList.pop();
         if (idToken.getType() != TokenType.TIDEN) {
             // Critical error
@@ -256,7 +256,7 @@ public class Parser
         // TODO Build tree node which will consist of idToken node and fieldsNode
     }
 
-    private void typetype() {
+    private SyntaxTreeNode typetype() {
         Token idToken = tokenList.pop();
         if (idToken.getType() != TokenType.TIDEN) {
             // Critical error
@@ -297,12 +297,12 @@ public class Parser
         // TODO Build tree node which will consist of idToken node, exprNode, and structidNode
     }
 
-    private void fields() {
+    private SyntaxTreeNode fields() {
         sdecl();
         fieldstail();
     }
 
-    private void fieldstail() {
+    private SyntaxTreeNode fieldstail() {
         if (tokenList.peek().getType() == TokenType.TIDEN) {
             sdecl();
             fieldstail();
@@ -310,7 +310,7 @@ public class Parser
         // this is an epsilon production
     }
 
-    private void sdecl() {
+    private SyntaxTreeNode sdecl() {
         Token idToken = tokenList.pop();
         if (idToken.getType() != TokenType.TIDEN) {
             // Critical error
@@ -324,7 +324,7 @@ public class Parser
         stypeOrStructid();
     }
 
-    private void stypeOrStructid() {
+    private SyntaxTreeNode stypeOrStructid() {
         if (tokenList.peek().getType() == TokenType.TINTG || tokenList.peek().getType() == TokenType.TFLOT || tokenList.peek().getType() == TokenType.TBOOL) {
             stype();
             return;
@@ -336,7 +336,7 @@ public class Parser
 
     }
     
-    private void stype() {
+    private SyntaxTreeNode stype() {
         Token token = tokenList.pop();
         if (token.getType() == TokenType.TINTG || token.getType() == TokenType.TFLOT || token.getType() == TokenType.TBOOL) {
             return;
@@ -344,11 +344,11 @@ public class Parser
         // Critical error, this function should not have been called due to lookahead
     }
 
-    private void arrays() {
+    private SyntaxTreeNode arrays() {
         
     }
 
-    private void functions() {
+    private SyntaxTreeNode functions() {
 
     }
 
