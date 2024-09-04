@@ -135,7 +135,7 @@ public class Parser
             // Functions
             else if (lookAhead.getType() == TokenType.TFUNC)
             {
-                functions();
+                funcs();
             }
             // Main Body
             else if (lookAhead.getType() == TokenType.TMAIN)
@@ -345,11 +345,184 @@ public class Parser
     }
 
     private SyntaxTreeNode arrays() {
-        
+        if (tokenList.peek().getType() == TokenType.TARRD) {
+            arrdecls();
+            return;
+        }
+        // Critical error, this function should not have been called
     }
 
-    private SyntaxTreeNode functions() {
+    private SyntaxTreeNode arrdecls() {
+        arrdecl();
+        arrdeclstail();
+    }
+
+    private SyntaxTreeNode arrdeclstail() {
+        if (tokenList.peek().getType() == TokenType.TCOMA) {
+            tokenList.pop();
+            arrdecl();
+            arrdeclstail();
+        }
+        // this is an epsilon production
+    }
+
+    private SyntaxTreeNode arrdecl() {
+        Token idToken = tokenList.pop();
+        if (idToken.getType() != TokenType.TIDEN) {
+            // Critical error
+            return;
+        }
+        if (tokenList.peek().getType() != TokenType.TCOLN) {
+            // Critical error
+            return;
+        }
+        tokenList.pop(); // dont care about colon keyword just has to be there
+        if (tokenList.peek().getType() != TokenType.TIDEN) {
+            // Critical error
+            return;
+        }
+        Token idToken2 = tokenList.pop();
+        // TODO Build tree node which will consist of idToken node and idToken2 node
 
     }
+
+    private void funcs() {
+        funcsPrime();
+    }
+
+    private void funcsPrime() {
+        if (tokenList.peek().getType() == TokenType.TFUNC) {
+            func();
+            funcsPrime();
+        }
+        // this is an epsilon production
+    }
+
+    private void func() {
+        if (tokenList.peek().getType() != TokenType.TFUNC) {
+            // Critical error
+            return;
+        }
+        tokenList.pop(); // dont care about func keyword just has to be there
+        Token idToken = tokenList.pop();
+        if (idToken.getType() != TokenType.TIDEN) {
+            // Critical error
+            return;
+        }
+        SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
+        if (tokenList.peek().getType() != TokenType.TLPAR) {
+            // Critical error
+            return;
+        }
+        tokenList.pop(); // dont care about left parenthesis keyword just has to be there
+        plist();
+        if (tokenList.peek().getType() != TokenType.TRPAR) {
+            // Critical error
+            return;
+        }
+        tokenList.pop(); // dont care about right parenthesis keyword just has to be there
+        if (tokenList.peek().getType() != TokenType.TCOLN) {
+            // Critical error
+            return;
+        }
+        tokenList.pop(); // dont care about colon keyword just has to be there
+        rtype();
+        // Enter the function's scope
+        currentSymbolTable = record.getScope();
+        funcbody();
+        // Exit the function's scope
+        currentSymbolTable = currentSymbolTable.getParent();
+
+        // TODO: Build tree node of bunch of stuff
+    }
+
+    private void rtype() {
+        if (tokenList.peek().getType() == TokenType.TVOID) {
+            tokenList.pop();
+            return;
+        }
+        stype();
+
+    }
+
+    private void plist() {
+        if (tokenList.peek().getType() == TokenType.TIDEN || tokenList.peek().getType() == TokenType.TCONST) {
+            params();
+            return;
+        }
+        // this is an epsilon production
+    }
+
+    private void params() {
+        param();
+        paramsPrime();
+    }
+
+    private void paramsPrime() {
+        if (tokenList.peek().getType() == TokenType.TCOMA) {
+            tokenList.pop();
+            param();
+            paramsPrime();
+        }
+        // this is an epsilon production
+    }
+
+    private void param() {
+        // TODO: Remember that param is const (if it is)
+        parammaybeconst();
+        Token idToken = tokenList.pop();
+        if (idToken.getType() != TokenType.TIDEN) {
+            // Critical error
+            return;
+        }
+        if (tokenList.peek().getType() != TokenType.TCOLN) {
+            // Critical error
+            return;
+        }
+        tokenList.pop(); // dont care about colon keyword just has to be there
+        paramtail();
+    }
+
+    private void parammaybeconst() {
+        if (tokenList.peek().getType() == TokenType.TCONS) {
+            tokenList.pop();
+            return;
+        }
+        // this is an epsilon production
+    }
+
+    private void paramtail() {
+        // TODO: No idea how to differentiate between them all
+        if (tokenList.peek().getType() == TokenType.TIDEN) {
+            typeid();
+            return;
+        }
+        stypeOrStructid();
+    }
+
+    private void funcbody() {
+
+    }
+
+    private void locals() {
+
+    }
+
+    private void dlist() {
+
+    }
+
+    private void dlistPrime() {
+
+    }
+
+    private void decl() {
+
+    }
+
+    private void decltail() {
+
+    }
+
 
 }
