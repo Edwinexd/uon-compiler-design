@@ -104,8 +104,11 @@
 
 import java.util.LinkedList;
 
+// We are intentionally breaking naming conventions here to match the CD24 grammar
 public class Parser 
 {
+    private SymbolTable rootSymbolTable = new SymbolTable();
+    private SymbolTable currentSymbolTable = rootSymbolTable;
     public LinkedList<Token> tokenList = new LinkedList<Token>();  
 
     public Parser(LinkedList<Token> list) 
@@ -127,17 +130,17 @@ public class Parser
             // Global
             if (lookAhead.getType() == TokenType.TCONS)
             {
-                globalsParse()
+                globals();
             }
             // Functions
             else if (lookAhead.getType() == TokenType.TFUNC)
             {
-                functionsParse()
+                functions();
             }
             // Main Body
             else if (lookAhead.getType() == TokenType.TMAIN)
             {
-                mainBodyParse()
+                mainBodyParse();
             }
 
         }
@@ -147,6 +150,205 @@ public class Parser
         }
 
         //<TreeBro>
+
+    }
+
+    private void globals() {
+        if (tokenList.peek().getType() == TokenType.TCONS) {
+            consts();
+        }
+        if (tokenList.peek().getType() == TokenType.TTYPD) {
+            types();
+        }
+        if (tokenList.peek().getType() == TokenType.TARRD) {
+            arrays();
+        }
+
+    }
+
+    private void consts() {
+        Token token = tokenList.pop();
+        if (token.getType() == TokenType.TCONS) {
+            initlist();
+            return;
+        }
+        // Critical error, this function should not have been called
+    }
+
+    private void initlist() {
+        init();
+        initlisttail();
+    }
+
+    private void initlisttail() {
+        if (tokenList.peek().getType() == TokenType.TCOMA) {
+            tokenList.pop();
+            init();
+            initlisttail();
+        }
+    }
+
+    private void init() {
+        // pop the id token
+        Token idToken = tokenList.pop();
+        if (idToken.getType() != TokenType.TIDEN) {
+            // Critical error
+            return;
+        }
+        currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
+        if (tokenList.peek().getType() != TokenType.TEQUL) {
+            // Critical error
+            return;
+        }
+        // We don't really care about storing the TEQUL token
+        tokenList.pop();
+        // Next will be an expression
+        var expressionNode = expr();
+        // TODO Build tree node which will consist of idToken node and expressionNode
+
+    }
+
+    private void types() {
+        Token token = tokenList.pop();
+        if (token.getType() == TokenType.TTYPD) {
+            typelist();
+            return;
+        }
+        // Critical error, this function should not have been called
+    }
+
+    private void typelist() {
+        type();
+        typelisttail();
+    }
+
+    private void typelisttail() {
+        if (tokenList.peek().getType() == TokenType.TIDEN) {
+            type();
+            typelisttail();
+        }
+        // this is an epsilon production
+    }
+
+    private void type() {
+        // TODO: If structid or if typeid, call the correct function
+        typestruct();
+        typetype();
+    }
+
+    private void typestruct() {
+        Token idToken = tokenList.pop();
+        if (idToken.getType() != TokenType.TIDEN) {
+            // Critical error
+            return;
+        }
+        if (tokenList.peek().getType() != TokenType.TTDEF) {
+            // Critical error
+            return;
+        }
+        tokenList.pop(); // dont care about def keyword just has to be there
+        var fieldsNode = fields();
+        if (tokenList.peek().getType() != TokenType.TEND) {
+            // Critical error
+            return;
+        }
+        tokenList.pop(); // dont care about end keyword just has to be there
+        // TODO Build tree node which will consist of idToken node and fieldsNode
+    }
+
+    private void typetype() {
+        Token idToken = tokenList.pop();
+        if (idToken.getType() != TokenType.TIDEN) {
+            // Critical error
+            return;
+        }
+        if (tokenList.peek().getType() != TokenType.TTDEF) {
+            // Critical error
+            return;
+        }
+        tokenList.pop(); // dont care about def keyword just has to be there
+        if (tokenList.peek().getType() != TokenType.TARAY) {
+            // Critical error
+            return;
+        }
+        tokenList.pop(); // dont care about array keyword just has to be there
+        if (tokenList.peek().getType() != TokenType.TLBRK) {
+            // Critical error
+            return;
+        }
+        tokenList.pop(); // dont care about left bracket keyword just has to be there
+        var exprNode = expr();
+        if (tokenList.peek().getType() != TokenType.TRBRK) {
+            // Critical error
+            return;
+        }
+        tokenList.pop(); // dont care about right bracket keyword just has to be there
+        if (tokenList.peek().getType() != TokenType.TTTOF) {
+            // Critical error
+            return;
+        }
+        tokenList.pop(); // dont care about of keyword just has to be there
+        var structidNode = structid();
+        if (tokenList.peek().getType() != TokenType.TEND) {
+            // Critical error
+            return;
+        }
+        tokenList.pop(); // dont care about end keyword just has to be there
+        // TODO Build tree node which will consist of idToken node, exprNode, and structidNode
+    }
+
+    private void fields() {
+        sdecl();
+        fieldstail();
+    }
+
+    private void fieldstail() {
+        if (tokenList.peek().getType() == TokenType.TIDEN) {
+            sdecl();
+            fieldstail();
+        }
+        // this is an epsilon production
+    }
+
+    private void sdecl() {
+        Token idToken = tokenList.pop();
+        if (idToken.getType() != TokenType.TIDEN) {
+            // Critical error
+            return;
+        }
+        if (tokenList.peek().getType() != TokenType.TCOLN) {
+            // Critical error
+            return;
+        }
+        tokenList.pop(); // dont care about colon keyword just has to be there
+        stypeOrStructid();
+    }
+
+    private void stypeOrStructid() {
+        if (tokenList.peek().getType() == TokenType.TINTG || tokenList.peek().getType() == TokenType.TFLOT || tokenList.peek().getType() == TokenType.TBOOL) {
+            stype();
+            return;
+        }
+        if (tokenList.peek().getType() == TokenType.TIDEN) {
+            Token idToken = tokenList.pop();
+            return;
+        }
+
+    }
+    
+    private void stype() {
+        Token token = tokenList.pop();
+        if (token.getType() == TokenType.TINTG || token.getType() == TokenType.TFLOT || token.getType() == TokenType.TBOOL) {
+            return;
+        }
+        // Critical error, this function should not have been called due to lookahead
+    }
+
+    private void arrays() {
+        
+    }
+
+    private void functions() {
 
     }
 
