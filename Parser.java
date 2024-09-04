@@ -1,68 +1,153 @@
-import javax.swing.JTree;
+// <program> ::= CD24 <id> <globals> <funcs> <mainbody>
+// <globals> ::= <consts> <types> <arrays>
+// <consts> ::= constants <initlist> | ε
+// <initlist> ::= <init> <initlisttail>
+// <initlisttail> ::= , <init> <initslisttail> | ε
+// <init> ::= <id> = <expr>
+
+// <types> ::= typedef <typelist> | ε
+// <typelist> ::= <type> <typelisttail>
+// <typelisttail> ::= <type> <typelisttail> | ε
+
+// <type> ::= <structid> def <fields> end
+// <type> ::= <typeid> def array [ <expr> ] of <structid> end
+// <fields> ::= <sdecl> <fieldstail>
+// <fieldstail> ::= <sdecl> <fieldstail> | ε
+
+// <arrays> ::= arraydef <arrdecls> | ε
+// <arrdecls> ::= <arrdecl> <arrdeclstail>
+// <arrdeclstail> ::= , <arrdecl> <arrdeclstail> | ε 
+// <arrdecl> ::= <id> : <typeid>
+
+// <funcs> ::= <funcPrime> 
+// <funcPrime> ::= <func> <funcPrime> | ε
+// <func> ::= func <id> ( <plist> ) : <rtype> <funcbody>
+// <rtype> ::= <stype> | void
+// <plist> ::= <params> | ε
+// <params> ::= <param> <paramsPrime>
+// <paramsPrime> ::= , <param> <paramsPrime> | ε
+// <param> ::= <parammaybeconst> <id> : <paramtail>
+// <parammaybeconst> ::= const | ε
+// <paramtail> ::= <typeid> | <stypeOrStructid>
+// <funcbody> ::= <locals> begin <stats> end
+// <locals> ::= <dlist> | ε
+// <dlist> ::= <decl> <dlistPrime>
+// <dlistPrime> ::= , <dlist> | ε
+// <decl> ::=  <id> : <decltail>
+// <decltail> ::= <typeid> | <stypeOrStructid>
+
+
+// <mainbody> ::= main <slist> begin <stats> end CD24 <id>
+// <slist> ::= <sdecl> <slistPrime>
+// <slistPrime> ::= , <sdecl> <slistPrime> | ε
+// <sdecl> ::= <id> : <stypeOrStructid>
+// <stypeOrStructid> ::= <stype> | <structid>
+
+// <stype> ::= int | float | bool
+
+// <stats> ::= <stat>; <statstail> | <strstat> <statstail>
+// <statstail> ::= <stat>; <statstail> | <strstat> <statstail> | ε
+// <strstat> ::= <forstat> | <ifstat> | <switchstat> | <dostat>
+// <stat> ::= <repstat> | <asgnstat> | <iostat> | <callstat> | <returnstat>
+// <forstat> ::= for ( <asgnlist> ; <bool> ) <stats> end
+// <repstat> ::= repeat ( <asgnlist> ) <stats> until <bool>
+// <dostat> ::= do <stats> while ( <bool> ) end
+// <asgnlist> ::= <alist> | ε
+// <alist> ::=<asgnstat> <alisttail>
+// <alisttail> ::= , <asgnstat> <alisttail> | ε
+
+// <ifstat> ::= if ( <bool> ) <stats> <ifstattail> end
+// <ifstattail> ::= else <stats> | elif (<bool>) <stats> | ε
+
+// <switchstat> ::= switch ( <expr> ) begin <caselist> end
+// <caselist> ::= case <expr> : <stats> break ; <caselist> | default : <stats>
+
+// <asgnstat> ::= <var> <asgnop> <bool>
+// <asgnop> :: == | += | -= | *= | /=
+
+// <iostat> ::= input <vlist> | print <prlist> | printline <prlist>
+
+// <callstat> ::= <id> ( <elist> ) | <id> ( )
+
+// <returnstat> ::= return void | return <expr>
+
+// <vlist> ::= <var> <vlisttail>
+// <vlisttail> ::= , <vlisttail> | ε
+// <var> ::= <id><vartail>
+// <vartail> ::= [<expr>]<vartailtail> | ε
+// <vartailtail> ::= . <id> | ε
+
+// <elist> ::= <bool> <elisttail>
+// <elisttail> ::= , <elist> | ε
+// <bool> ::= not <bool> | <bool><logop> <rel> | <rel>
+// <rel> ::= <expr> <reltail>
+// <reltail> ::= <relop><expr> | ε
+// <logop> ::= and | or | xor
+// <relop> ::= == | != | > | <= | < | >=
+
+// <expr> ::= <term> | <expr> <exprtail>
+// <exprtail> ::= + <term> | - <term>
+// <term> ::= <fact> | <term> <termtail>
+// <termtail> ::= * <fact> | / <fact> | % <fact>
+// <fact> ::= <fact> ^ <exponent> | <exponent>
+// <exponent> ::= <var> | <intlit> | <reallit> | <fncall> | true | false
+// <exponent> ::= ( <bool> )
+
+// <fncall> ::= <id> ( <elist> ) | <id> ( )
+
+// <prlist> ::= <printitem> <prlisttail>
+// <prlisttail> ::= , <prlist> | ε
+// <printitem> ::= <expr> | <string>
+
+// <id>, <structid>, <typeid> are all simply identifier tokens returned by the scanner.
+// <intlit>, <reallit> and <string> are also special tokens returned by the scanner.
+
+import java.util.LinkedList;
 
 public class Parser 
 {
-    // im assuming we will be creating a tree. from the lecture notes it looks like the tree
-    // im guessing that the structure will be somthing like
+    public LinkedList<Token> tokenList = new LinkedList<Token>();  
 
-    // token =>  
-
-
-    // built after
-    private JTree syntaxTree = new JTree();
-
-    private SyntaxTreeNode root = new SyntaxTreeNode(null);
-
-    // sort of a pointer but not really
-    // will act as a pointer when setting children but then when i set it to one of the children
-    // it should not reser the current one
-    private SyntaxTreeNode current;
-
-    public void pass(Token token) 
+    public Parser(LinkedList<Token> list) 
     {
-        // level 1 of the tree
-
-        // CD24
-        if (token.getType() == TokenType.TIDEN)
-        {
-            addToRoot(token);
-        }
-        // begin
-        else if (token.getType() == TokenType.TBEGN)
-        {
-            addToRoot(token);
-        }
-        // main
-        else if (token.getType() == TokenType.TMAIN)
-        {
-            addToRoot(token);
-        }
-
-        // So what i am thinking with this is i need to have the base methods in the first layer of the tree
-        // then after the first layer of the tree i will have the current and if it is not any of the
-        // other identifiers it will add to the first layer. But if a new token comes through then i will be
-        // at the current and it will skip over all of the ones above and i will need to implement the logic
-        // for that below...
-
-        // then ill have to look more at the structure and part the red seas
-
-
+        tokenList = list;
     }
 
-
-    private void addToRoot(Token token)
+    public void InitiateParsing()
     {
-        // add to root
-        SyntaxTreeNode node = new SyntaxTreeNode(token);
-
-        root.add(node);
-
-        // maybe??
-        current = node;
+        programParse();
     }
 
+    private void programParse()
+    {
+        Token token = tokenList.pop();
+        Token lookAhead = tokenList.peek();
+        if (token.getType() == TokenType.TCD24)
+        {
+            // Global
+            if (lookAhead.getType() == TokenType.TCONS)
+            {
+                globalsParse()
+            }
+            // Functions
+            else if (lookAhead.getType() == TokenType.TFUNC)
+            {
+                functionsParse()
+            }
+            // Main Body
+            else if (lookAhead.getType() == TokenType.TMAIN)
+            {
+                mainBodyParse()
+            }
 
+        }
+        else
+        {
+            // Critical error
+        }
 
+        //<TreeBro>
 
+    }
 
 }
