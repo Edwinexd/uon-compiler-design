@@ -37,7 +37,7 @@ public class SymbolTable {
     }
 
     public SymbolTableRecord getOrCreateToken(String name, Token token) {
-        Optional<SymbolTableRecord> existingRecord = getToken(name);
+        Optional<SymbolTableRecord> existingRecord = getTokenSelf(name);
         if (existingRecord.isPresent()) {
             return existingRecord.get();
         }
@@ -45,6 +45,13 @@ public class SymbolTable {
         SymbolTableRecord record = new SymbolTableRecord(this, token.getType(), name, token);
         map.put(name, record);
         return record;
+    }
+
+    private Optional<SymbolTableRecord> getTokenSelf(String name) {
+        if (map.containsKey(name)) {
+            return Optional.of(map.get(name));
+        }
+        return Optional.empty();
     }
 
     public Optional<SymbolTableRecord> getToken(String name) {

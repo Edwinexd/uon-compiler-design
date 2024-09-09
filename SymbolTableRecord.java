@@ -1,3 +1,7 @@
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Optional;
+
 public class SymbolTableRecord {
     private final SymbolTable parent;
     private final int id;
@@ -5,6 +9,9 @@ public class SymbolTableRecord {
     private final TokenType type;
     private String name; // id/int/reals/strings
     private Token ogToken; // contains line info e.t.c of first declaration
+    private DeclarationType declarationType;
+    private List<SymbolTableRecord> arguments; // only present if declarationType == FUNCTION, also part of ownScope
+    private DeclarationType returnType; // only present if declarationType == FUNCTION
 
     // for later use
     private int base;
@@ -47,6 +54,41 @@ public class SymbolTableRecord {
     public int getOffset() {
         return offset;
     }
+
+    public Optional<DeclarationType> getDeclarationType() {
+        return Optional.ofNullable(declarationType);
+    }
+
+    public void setDeclarationType(DeclarationType declarationType) {
+        this.declarationType = declarationType;
+    }
+
+    public Optional<List<SymbolTableRecord>> getArguments() {
+        return Optional.ofNullable(arguments);
+    }
+
+    public void addArgument(SymbolTableRecord argument) {
+        if (declarationType != DeclarationType.FUNCTION) {
+            throw new IllegalStateException("Cannot add arguments to a non-function record");
+        }
+        if (arguments == null) {
+            arguments = new LinkedList<>();
+        }
+        arguments.add(argument);
+    }
+
+    public Optional<DeclarationType> getReturnType() {
+        return Optional.ofNullable(returnType);
+    }
+
+    public void setReturnType(DeclarationType returnType) {
+        if (declarationType != DeclarationType.FUNCTION) {
+            throw new IllegalStateException("Cannot set return type to a non-function record");
+        }
+        this.returnType = returnType;
+    }
+
+
 
     public SymbolTable getScope() {
         // TODO: This should be restricted to function identifiers e.t.c.
