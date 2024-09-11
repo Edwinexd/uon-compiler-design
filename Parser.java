@@ -48,7 +48,9 @@
 // <stats> ::= <stat>; <statstail> | <strstat> <statstail>
 // <statstail> ::= <stat>; <statstail> | <strstat> <statstail> | ε
 // <strstat> ::= <forstat> | <ifstat> | <switchstat> | <dostat>
-// <stat> ::= <repstat> | <asgnstat> | <iostat> | <callstat> | <returnstat>
+// <stat> ::= <repstat> | <iostat> | <returnstat> | <asgnstatorcallstat>
+// <asgnstatorcallstat> ::= <id> <asgnstatorcallstattail>
+// <asgnstatorcallstattail> ::= <vartail> | ( <callstattail>
 // <forstat> ::= for ( <asgnlist> ; <bool> ) <stats> end
 // <repstat> ::= repeat ( <asgnlist> ) <stats> until <bool>
 // <dostat> ::= do <stats> while ( <bool> ) end
@@ -67,7 +69,8 @@
 
 // <iostat> ::= input <vlist> | print <prlist> | printline <prlist>
 
-// <callstat> ::= <id> ( <elist> ) | <id> ( )
+// <callstat> ::= <id> ( <callstattail>
+// <callstattail> ::= <elist> ) | )
 
 // <returnstat> ::= return void | return <expr>
 
@@ -85,10 +88,12 @@
 // <logop> ::= and | or | xor
 // <relop> ::= == | != | > | <= | < | >=
 
-// <expr> ::= <term> | <expr> <exprtail>
-// <exprtail> ::= + <term> | - <term>
-// <term> ::= <fact> | <term> <termtail>
-// <termtail> ::= * <fact> | / <fact> | % <fact>
+// TODO: Expr & exprtail may be incorrect!
+// <expr> ::= <term> <exprtail>
+// <exprtail> ::= + <expr> | - <expr> | ε
+// TODO: Term & termtail may be incorrect!
+// <term> ::= <fact> <termtail>
+// <termtail> ::= * <term> | / <term> | ε
 // <fact> ::= <fact> ^ <exponent> | <exponent>
 // <exponent> ::= <var> | <intlit> | <reallit> | <fncall> | true | false
 // <exponent> ::= ( <bool> )
@@ -116,161 +121,213 @@ public class Parser
         tokenList = list;
     }
 
-    public void InitiateParsing()
+    public void initParsing()
     {
-        var SyntaxTree = programParse();
+        SyntaxTreeNode syntaxTree = programParse();
     }
 
     // <program> ::= CD24 <id> <globals> <funcs> <mainbody>
     private SyntaxTreeNode programParse()
     {
-        Token token = tokenList.pop();
-        Token lookAhead = tokenList.peek();
-        if (token.getType() != TokenType.TCD24)
+
+        if (tokenList.peek().getType() != TokenType.TCD24)
         {
-            
             // Critical error
         }
+        tokenList.pop(); // CD24
+        if (tokenList.peek().getType() != TokenType.TIDEN)
+        {
+            // Critical error
+        }
+        Token idToken = tokenList.pop();
+        SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
+        record.setDeclarationType(DeclarationType.PROGRAM);
+        SyntaxTreeNode rootNode = new SyntaxTreeNode(TreeNodeType.NPROG, idToken, record);
 
         // Global
-        if (lookAhead.getType() == TokenType.TCONS)
+        if (tokenList.peek().getType() == TokenType.TCONS)
         {
-            globals();
+            SyntaxTreeNode globals = globals();
+            rootNode.setFirstChild(globals);
         }
         // Functions
-        else if (lookAhead.getType() == TokenType.TFUNC)
+        if (tokenList.peek().getType() == TokenType.TFUNC)
         {
-            funcs();
+            SyntaxTreeNode funcs = funcs();
+            rootNode.setFirstChild(funcs);
         }
-        // Main Body
-        else if (lookAhead.getType() == TokenType.TMAIN)
+        if (tokenList.peek().getType() != TokenType.TMAIN)
         {
-            mainBodyParse();
+            // Critical error, someone decided not to include a mandatory main function
+            throw new RuntimeException("No main function found :(");
         }
 
-        //<TreeBro>
+        SyntaxTreeNode mainBody = mainbody();
+        rootNode.setFirstChild(mainBody);
 
+        return rootNode;
     }
 
 
     // <globals> ::= <consts> <types> <arrays>
     private SyntaxTreeNode globals() {
+        SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NGLOB);
         if (tokenList.peek().getType() == TokenType.TCONS) {
-            consts();
+            SyntaxTreeNode constsNode = consts();
+            node.setFirstChild(constsNode);
         }
         if (tokenList.peek().getType() == TokenType.TTYPD) {
-            types();
+            SyntaxTreeNode typesNode = types();
+            node.setSecondChild(typesNode);
         }
         if (tokenList.peek().getType() == TokenType.TARRD) {
-            arrays();
+            SyntaxTreeNode arraysNode = arrays();
+            node.setThirdChild(arraysNode);
         }
-
+        return node;
     }
 
     // <consts> ::= constants <initlist> | ε
     private SyntaxTreeNode consts() {
-        Token token = tokenList.pop();
-        if (token.getType() == TokenType.TCONS) {
-            initlist();
-            return;
+        // this does not produce its own node and just returns the initlist node
+        if (tokenList.peek().getType() != TokenType.TCONS) {
+            // Should not really have been called
+            // Critical error, this function should not have been called
+            throw new RuntimeException("Critical error, this function should not have been called");
         }
-        // Critical error, this function should not have been called
+        tokenList.pop(); // constants
+        return initlist();
     }
 
     // <initlist> ::= <init> <initlisttail>
     private SyntaxTreeNode initlist() {
-        init();
-        initlisttail();
+        SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NILIST);
+        node.setFirstChild(init());
+        // for some reason they dont want us to use the second child when we have two possible children
+        SyntaxTreeNode tail = initlisttail();
+        if (tail != null) {
+            node.setThirdChild(tail);
+        }
+        return node;
     }
 
     // <initlisttail> ::= , <init> <initslisttail> | ε
     private SyntaxTreeNode initlisttail() {
-        if (tokenList.peek().getType() == TokenType.TCOMA) {
-            tokenList.pop();
-            init();
-            initlisttail();
+        if (tokenList.peek().getType() != TokenType.TCOMA) {
+            // this is an epsilon production
+            return null;
         }
+        tokenList.pop(); // ,
+        SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NILIST);
+        node.setFirstChild(init());
+        SyntaxTreeNode tail = initlisttail();
+        if (tail != null) {
+            node.setThirdChild(tail);
+        }
+        return node;
     }
 
     // <init> ::= <id> = <expr>
     private SyntaxTreeNode init() {
         // pop the id token
+        if (tokenList.peek().getType() != TokenType.TIDEN) {
+            // Should not really have been called
+            throw new RuntimeException("Critical error, this function should not have been called");
+        }
         Token idToken = tokenList.pop();
-        if (idToken.getType() != TokenType.TIDEN) {
-            // Critical error
-            return;
-        }
-        currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
-        if (tokenList.peek().getType() != TokenType.TEQUL) {
-            // Critical error
-            return;
-        }
-        // We don't really care about storing the TEQUL token
-        tokenList.pop();
-        // Next will be an expression
-        var expressionNode = expr();
-        // TODO Build tree node which will consist of idToken node and expressionNode
+        SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
+        // TODO Check if declarationtype here should be constant or int/float/bool etc.
+        record.setDeclarationType(DeclarationType.CONSTANT);
 
+        if (tokenList.peek().getType() != TokenType.TEQUL) {
+            throw new RuntimeException("Invalid syntax, expected =");
+        }
+        tokenList.pop(); // =
+
+        SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NINIT, idToken, record);
+        node.setFirstChild(expr());
+        return node;
     }
 
     // <types> ::= typedef <typelist> | ε
     private SyntaxTreeNode types() {
-        Token token = tokenList.pop();
-        if (token.getType() == TokenType.TTYPD) {
-            typelist();
-            return;
+        // this does not produce its own node and just returns the typelist node
+        if (tokenList.peek().getType() != TokenType.TTYPD) {
+            // Critical error, this function should not have been called
+            throw new RuntimeException("Critical error, this function should not have been called");
         }
-        // Critical error, this function should not have been called
+        tokenList.pop(); // typedef
+        return typelist();
     }
 
     // <typelist> ::= <type> <typelisttail>
     private SyntaxTreeNode typelist() {
-        type();
-        typelisttail();
+        SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NTYPEL);
+        node.setFirstChild(type());
+        SyntaxTreeNode tail = typelisttail();
+        if (tail != null) {
+            node.setThirdChild(tail);
+        }
+        return node;
     }
 
     // <typelisttail> ::= <type> <typelisttail> | ε
     private SyntaxTreeNode typelisttail() {
-        if (tokenList.peek().getType() == TokenType.TIDEN) {
-            type();
-            typelisttail();
+        if (tokenList.peek().getType() != TokenType.TIDEN) {
+            // this is an epsilon production
+            return null;
         }
-        // this is an epsilon production
+        SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NTYPEL);
+        node.setFirstChild(type());
+        SyntaxTreeNode tail = typelisttail();
+        if (tail != null) {
+            node.setThirdChild(tail);
+        }
+        return node;
+    }
+
+    // <type> ::= N/A (choosing which type to parse based on lookahead)
+    /*
+     * More or less a "proxy" for calling the correct type function.
+     */
+    private SyntaxTreeNode type() {
+        if (tokenList.peek().getType() != TokenType.TIDEN) {
+            throw new RuntimeException("Critical error, expected an identifier");
+        }
+        Token peekToken = tokenList.peek();
+        SymbolTableRecord record = currentSymbolTable.getOrCreateToken(peekToken.getLexeme(), peekToken);
+        if (record.getDeclarationType().isPresent() && record.getDeclarationType().get() == DeclarationType.STRUCT) {
+            return typestruct();
+        } else if (record.getDeclarationType().isPresent() && record.getDeclarationType().get() == DeclarationType.ARRAY) {
+            return typetype();
+        }
+        throw new RuntimeException("Critical error, expected a struct or array type");
     }
 
     // <type> ::= <structid> def <fields> end
-    private SyntaxTreeNode type() {
-        // TODO: If structid or if typeid, call the correct function
-        typestruct();
-        typetype();
+    private SyntaxTreeNode typestruct() {
+        SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NRTYPE);
+        if (tokenList.peek().getType() != TokenType.TIDEN) {
+            throw new RuntimeException("Critical error, expected an identifier");
+        }
+        Token idToken = tokenList.pop();
+        SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
+        record.setDeclarationType(DeclarationType.STRUCT);
+        node.setNodeValue(idToken);
+        node.setValueRecord(record);
+        if (tokenList.peek().getType() != TokenType.TTDEF) {
+            throw new RuntimeException("Critical error, expected def keyword");
+        }
+        tokenList.pop(); // def
+        node.setFirstChild(fields());
+        if (tokenList.peek().getType() != TokenType.TTEND) {
+            throw new RuntimeException("Critical error, expected end keyword");
+        }
+        tokenList.pop(); // end
+        return node;
     }
-
-
 
     // <type> ::= <typeid> def array [ <expr> ] of <structid> end
-
-// ?????????????????????????????????????????????
-
-    private SyntaxTreeNode typestruct() {
-        Token idToken = tokenList.pop();
-        if (idToken.getType() != TokenType.TIDEN) {
-            // Critical error
-            return;
-        }
-        if (tokenList.peek().getType() != TokenType.TTDEF) {
-            // Critical error
-            return;
-        }
-        tokenList.pop(); // dont care about def keyword just has to be there
-        var fieldsNode = fields();
-        if (tokenList.peek().getType() != TokenType.TEND) {
-            // Critical error
-            return;
-        }
-        tokenList.pop(); // dont care about end keyword just has to be there
-        // TODO Build tree node which will consist of idToken node and fieldsNode
-    }
-
     private SyntaxTreeNode typetype() {
         Token idToken = tokenList.pop();
         if (idToken.getType() != TokenType.TIDEN) {
@@ -314,51 +371,55 @@ public class Parser
 
     // <fields> ::= <sdecl> <fieldstail>
     private SyntaxTreeNode fields() {
-        sdecl();
-        fieldstail();
+        SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NFLIST);
+        node.setFirstChild(sdecl());
+        SyntaxTreeNode tail = fieldstail();
+        if (tail != null) {
+            node.setThirdChild(tail);
+        }
+        return node;
     }
 
     // <fieldstail> ::= <sdecl> <fieldstail> | ε
     private SyntaxTreeNode fieldstail() {
-        if (tokenList.peek().getType() == TokenType.TIDEN) {
-            sdecl();
-            fieldstail();
+        if (tokenList.peek().getType() != TokenType.TIDEN) {
+            return null;
         }
-        // this is an epsilon production
+        SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NFLIST);
+        node.setFirstChild(sdecl());
+        SyntaxTreeNode tail = fieldstail();
+        if (tail != null) {
+            node.setThirdChild(tail);
+        }
+        return node;
     }
 
+    // <sdecl> ::= <id> : <stypeOrStructid>
     private SyntaxTreeNode sdecl() {
+        if (tokenList.peek().getType() != TokenType.TIDEN) {
+            throw new RuntimeException("Critical error, expected an identifier");
+        }
         Token idToken = tokenList.pop();
-        if (idToken.getType() != TokenType.TIDEN) {
-            // Critical error
-            return;
-        }
         if (tokenList.peek().getType() != TokenType.TCOLN) {
-            // Critical error
-            return;
+            throw new RuntimeException("Critical error, expected colon");
         }
-        tokenList.pop(); // dont care about colon keyword just has to be there
-        stypeOrStructid();
-    }
+        tokenList.pop(); // :
+        TreeNodeType outType;
+        SyntaxTreeNode stypeOrStructidNode = stypeOrStructid();
+        if (stypeOrStructidNode.getNodeValue().get().getType() == TokenType.TIDEN) {
+            // NSDECL
+            outType = TreeNodeType.NSDECL;
+        } else {
+            // NTDECL
+            outType = TreeNodeType.NTDECL;
+        }
+        SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
+        // TODO: Not sure what this ones declaration type should be
+        record.setDeclarationType(null);
+        SyntaxTreeNode node = new SyntaxTreeNode(outType, idToken, record);
+        node.setFirstChild(stypeOrStructidNode);
+        return node;
 
-    private SyntaxTreeNode stypeOrStructid() {
-        if (tokenList.peek().getType() == TokenType.TINTG || tokenList.peek().getType() == TokenType.TFLOT || tokenList.peek().getType() == TokenType.TBOOL) {
-            stype();
-            return;
-        }
-        if (tokenList.peek().getType() == TokenType.TIDEN) {
-            Token idToken = tokenList.pop();
-            return;
-        }
-
-    }
-
-    private SyntaxTreeNode stype() {
-        Token token = tokenList.pop();
-        if (token.getType() == TokenType.TINTG || token.getType() == TokenType.TFLOT || token.getType() == TokenType.TBOOL) {
-            return;
-        }
-        // Critical error, this function should not have been called due to lookahead
     }
 
     // <arrays> ::= arraydef <arrdecls> | ε
@@ -410,7 +471,7 @@ public class Parser
     }
 
     // <funcs> ::= <funcPrime> 
-    private void funcs() {
+    private SyntaxTreeNode funcs() {
         funcsPrime();
     }
 
@@ -436,11 +497,13 @@ public class Parser
             return;
         }
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
+        record.setDeclarationType(DeclarationType.FUNCTION);
         if (tokenList.peek().getType() != TokenType.TLPAR) {
             // Critical error
             return;
         }
         tokenList.pop(); // dont care about left parenthesis keyword just has to be there
+        // TODO: Should be part of func parameters + scope
         plist();
         if (tokenList.peek().getType() != TokenType.TRPAR) {
             // Critical error
@@ -615,7 +678,7 @@ public class Parser
 
 
     // <mainbody> ::= main <slist> begin <stats> end CD24 <id>
-    private void mainbody() {
+    private SyntaxTreeNode mainbody() {
 
         if (tokenList.peek().getType() != TokenType.TMAIN) {
             // Critical error
@@ -676,32 +739,21 @@ public class Parser
 
     }
 
-
-    // <sdecl> ::= <id> : <stypeOrStructid>
-    private SyntaxTreeNode sdecl() {
-        Token idToken = tokenList.pop();
-        if (idToken.getType() != TokenType.TIDEN) {
-            // Critical error
-            return;
-        }
-        if (tokenList.peek().getType() != TokenType.TCOLN) {
-            // Critical error
-            return;
-        }
-        tokenList.pop(); // dont care about colon keyword just has to be there
-        stypeOrStructid();
-    }
-
     // <stypeOrStructid> ::= <stype> | <structid>
     private SyntaxTreeNode stypeOrStructid() {
         if (tokenList.peek().getType() == TokenType.TINTG || tokenList.peek().getType() == TokenType.TFLOT || tokenList.peek().getType() == TokenType.TBOOL) {
-            stype();
-            return;
+            return stype();
         }
         if (tokenList.peek().getType() == TokenType.TIDEN) {
             Token idToken = tokenList.pop();
-            return;
+            SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
+            if (record.getDeclarationType().isPresent() && record.getDeclarationType().get() != DeclarationType.STRUCT) {
+                // TODO Incorrect type
+                throw new RuntimeException("Critical error, expected a struct identifier");
+            }
+            return new SyntaxTreeNode(TreeNodeType.SpecialTODO, idToken, record);
         }
+        throw new RuntimeException("Critical error, expected a struct identifier or a type");
 
     }
 
@@ -716,7 +768,7 @@ public class Parser
 
 
 
-// <stats> ::= <stat>; <statstail> | <strstat> <statstail>
+    // <stats> ::= <stat>; <statstail> | <strstat> <statstail>
     private void stats() {
         if (tokenList.peek().getType() == TokenType.TTFOR || 
             tokenList.peek().getType() == TokenType.TIFTH ||
@@ -793,56 +845,850 @@ public class Parser
     }
 
 
-    // <stat> ::= <repstat> | <asgnstat> | <iostat> | <callstat> | <returnstat>
+    // <stat> ::= <repstat> | <iostat> | <returnstat> | <asgnstatorcallstat>
+    private void stat() {
 
-// <forstat> ::= for ( <asgnlist> ; <bool> ) <stats> end
-// <repstat> ::= repeat ( <asgnlist> ) <stats> until <bool>
-// <dostat> ::= do <stats> while ( <bool> ) end
-// <asgnlist> ::= <alist> | ε
-// <alist> ::=<asgnstat> <alisttail>
-// <alisttail> ::= , <asgnstat> <alisttail> | ε
+        if (tokenList.peek().getType() == TokenType.TREPT) {
 
-// <ifstat> ::= if ( <bool> ) <stats> <ifstattail> end
-// <ifstattail> ::= else <stats> | elif (<bool>) <stats> | ε
+            repstat();
 
-// <switchstat> ::= switch ( <expr> ) begin <caselist> end
-// <caselist> ::= case <expr> : <stats> break ; <caselist> | default : <stats>
+        } else if (tokenList.peek().getType() == TokenType.TINPT || 
+                    tokenList.peek().getType() == TokenType.TPRNT || 
+                    tokenList.peek().getType() == TokenType.TPRLN) {
 
-// <asgnstat> ::= <var> <asgnop> <bool>
-// <asgnop> :: == | += | -= | *= | /=
+            iostat();
 
-// <iostat> ::= input <vlist> | print <prlist> | printline <prlist>
+        } else if (tokenList.peek().getType() == TokenType.TRETN) {
 
-// <callstat> ::= <id> ( <elist> ) | <id> ( )
+            returnstat();
 
-// <returnstat> ::= return void | return <expr>
+        } else if (tokenList.peek().getType() == TokenType.TIDEN) {
 
-// <vlist> ::= <var> <vlisttail>
-// <vlisttail> ::= , <vlisttail> | ε
-// <var> ::= <id><vartail>
-// <vartail> ::= [<expr>]<vartailtail> | ε
-// <vartailtail> ::= . <id> | ε
+            asgnstatorcallstat();
 
-// <elist> ::= <bool> <elisttail>
-// <elisttail> ::= , <elist> | ε
-// <bool> ::= not <bool> | <bool><logop> <rel> | <rel>
-// <rel> ::= <expr> <reltail>
-// <reltail> ::= <relop><expr> | ε
-// <logop> ::= and | or | xor
-// <relop> ::= == | != | > | <= | < | >=
+        } else {
+            // Error
+        }
+        
+    }
+    // <asgnstatorcallstat> ::= <id> <asgnstatorcallstattail>
+    private void asgnstatorcallstat() {
+        if (tokenList.peek().getType() == TokenType.TIDEN) {
 
-// <expr> ::= <term> | <expr> <exprtail>
-// <exprtail> ::= + <term> | - <term>
-// <term> ::= <fact> | <term> <termtail>
-// <termtail> ::= * <fact> | / <fact> | % <fact>
-// <fact> ::= <fact> ^ <exponent> | <exponent>
-// <exponent> ::= <var> | <intlit> | <reallit> | <fncall> | true | false
-// <exponent> ::= ( <bool> )
+            tokenList.pop(); // <id>
 
-// <fncall> ::= <id> ( <elist> ) | <id> ( )
+            asgnstatorcallstattail();
 
-// <prlist> ::= <printitem> <prlisttail>
-// <prlisttail> ::= , <prlist> | ε
-// <printitem> ::= <expr> | <string>
+        } else {
+            // Error
+        }
+    }
+    // <asgnstatorcallstattail> ::= <vartail> | ( <callstattail>
+    private void asgnstatorcallstattail() {
+        TokenType currentType = tokenList.peek().getType();
 
+        if (currentType == TokenType.TLBRK) {
+
+            vartail();
+
+        } else if (currentType == TokenType.TLPAR) {
+
+            tokenList.pop(); // (
+
+            callstattail();
+
+        } else {
+            // Error
+        }
+    }
+
+    // <forstat> ::= for ( <asgnlist> ; <bool> ) <stats> end
+    private void forstat() {
+
+        tokenList.pop(); // for
+
+        if (tokenList.peek().getType() != TokenType.TLPAR) {
+            // Critical error
+            return;
+        }
+
+        tokenList.pop(); // (
+
+        asgnlist();
+
+        if (tokenList.peek().getType() != TokenType.TLPAR) {
+            // Critical error
+            return;
+        }
+
+        tokenList.pop(); // ;
+
+        boolParse();
+
+        if (tokenList.peek().getType() != TokenType.TRPAR) {
+            // Critical error
+            return;
+        }
+
+        tokenList.pop(); // )
+
+        stats();
+
+        if (tokenList.peek().getType() != TokenType.TTEND) {
+            // Critical error
+            return;
+        }
+
+        tokenList.pop(); // end
+    }
+    // <repstat> ::= repeat ( <asgnlist> ) <stats> until <bool>
+    private void repstat() {
+
+        tokenList.pop(); // repeat
+
+        if (tokenList.peek().getType() != TokenType.TLPAR) {
+            // Critical error
+            return;
+        }
+
+        tokenList.pop(); // (
+
+        asgnlist();
+
+        if (tokenList.peek().getType() != TokenType.TRPAR) {
+            // Critical error
+            return;
+        }
+
+        tokenList.pop(); // )
+
+        stats();
+
+        if (tokenList.peek().getType() != TokenType.TUNTL) {
+            // Critical error
+            return;
+        }
+
+        tokenList.pop(); // until
+
+        boolParse();
+    }
+    // <dostat> ::= do <stats> while ( <bool> ) end
+    private void dostat() {
+
+        tokenList.pop(); // do
+
+        stats();
+
+        if (tokenList.peek().getType() != TokenType.TWHIL) {
+            // Critical error
+            return;
+        }
+
+        tokenList.pop(); // while
+
+        if (tokenList.peek().getType() != TokenType.TLPAR) {
+            // Critical error
+            return;
+        }
+
+        tokenList.pop(); // (
+
+        boolParse();
+
+        if (tokenList.peek().getType() != TokenType.TRPAR) {
+            // Critical error
+            return;
+        }
+
+        tokenList.pop(); // )
+
+        if (tokenList.peek().getType() != TokenType.TTEND) {
+            // Critical error
+            return;
+        }
+
+        tokenList.pop(); // end
+    }
+    // <asgnlist> ::= <alist> | ε
+    private void asgnlist() {
+        if (tokenList.peek().getType() == TokenType.TIDEN) {
+            alist();
+        }
+        // EEEEEEEEEEEEEEEEEEEEEEEEEEE
+    }
+    // <alist> ::=<asgnstat> <alisttail>
+    private void alist() {
+        asgnstat();
+        alisttail();
+    }
+    // <alisttail> ::= , <asgnstat> <alisttail> | ε
+    private void alisttail() {
+
+        if (tokenList.peek().getType() == TokenType.TCOMA) {
+
+            tokenList.pop(); // ,
+
+            asgnstat();
+
+            alisttail();
+
+        }
+    }
+
+    // <ifstat> ::= if ( <bool> ) <stats> <ifstattail> end
+    private void ifstat() {
+
+        tokenList.pop(); // if
+
+        if (tokenList.peek().getType() != TokenType.TLPAR) {
+            // Critical error
+            return;
+        }
+
+        tokenList.pop(); // (
+
+        boolParse();
+
+        if (tokenList.peek().getType() != TokenType.TRPAR) {
+            // Critical error
+            return;
+        }
+
+        tokenList.pop(); // )
+
+        stats();
+
+        ifstattail();
+
+        if (tokenList.peek().getType() != TokenType.TTEND) {
+            // Critical error
+            return;
+        }
+
+        tokenList.pop(); // end
+
+    }
+    // <ifstattail> ::= else <stats> | elif (<bool>) <stats> | ε
+    private void ifstattail() {
+        tokenList.pop();
+
+        if (tokenList.peek().getType() == TokenType.TELSE) {
+            
+            tokenList.pop(); // else
+
+            stats();
+
+        } else if (tokenList.peek().getType() == TokenType.TELIF) {
+            
+            if (tokenList.peek().getType() != TokenType.TLPAR) {
+                // Critical error
+                return;
+            }
+
+            tokenList.pop(); // (
+
+            boolParse();
+
+            if (tokenList.peek().getType() != TokenType.TRPAR) {
+                // Critical error
+                return;
+            }
+
+            tokenList.pop(); // )
+
+            stats();
+
+        } else {
+            // eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+        }
+    }
+
+    // <switchstat> ::= switch ( <expr> ) begin <caselist> end
+    private void switchstat() {
+        if (tokenList.peek().getType() != TokenType.TSWTH) {
+            //er Raw
+        }
+        tokenList.pop(); // switch
+            
+        if (tokenList.peek().getType() != TokenType.TLPAR) {
+            // Critical error
+            return;
+        }
+
+        tokenList.pop(); // (
+
+        expr();
+
+        if (tokenList.peek().getType() != TokenType.TRPAR) {
+            // Critical error
+            return;
+        }
+
+        tokenList.pop(); // )
+
+        if (tokenList.peek().getType() != TokenType.TBEGN) {
+            // Critical error
+            return;
+        }
+
+        tokenList.pop(); // begin
+
+        caselist();
+
+        if (tokenList.peek().getType() != TokenType.TTEND) {
+            // Critical error
+            return;
+        }
+
+        tokenList.pop(); // end
+    }
+    // <caselist> ::= case <expr> : <stats> break ; <caselist> | default : <stats>
+    private void caselist() {
+        if (tokenList.peek().getType() == TokenType.TCASE) {
+
+            tokenList.pop(); // case
+
+            expr();
+
+            if (tokenList.peek().getType() != TokenType.TCOLN) {
+                // Critical error
+                return;
+            }
+            
+            tokenList.pop(); // :
+
+            stats();
+
+            if (tokenList.peek().getType() != TokenType.TBREK) {
+                // Critical error
+                return;
+            }
+
+            tokenList.pop(); // break
+
+            if (tokenList.peek().getType() != TokenType.TSEMI) {
+                // Critical error
+                return;
+            }
+
+            tokenList.pop(); // ;
+
+            caselist();
+
+        } else if (tokenList.peek().getType() == TokenType.TDFLT) {
+
+            tokenList.pop(); // default
+
+            if (tokenList.peek().getType() != TokenType.TCOLN) {
+                // Critical error
+                return;
+            }
+
+            tokenList.pop(); // :
+
+            stats();
+
+        } else {
+            // error
+        }
+    }
+    // <asgnstat> ::= <var> <asgnop> <bool>
+    private void asgnstat() {
+        var();
+        asgnop();
+        boolParse();
+    }
+    // <asgnop> :: == | += | -= | *= | /=
+    private void asgnop() {
+        if (tokenList.peek().getType() == TokenType.TEQEQ) {
+            tokenList.pop();
+            // in tree
+            return;
+        } else if (tokenList.peek().getType() == TokenType.TPLEQ) {
+            tokenList.pop();
+            // in tree
+            return;
+        } else if (tokenList.peek().getType() == TokenType.TMNEQ) {
+            tokenList.pop();
+            // in tree
+            return;
+        }else if (tokenList.peek().getType() == TokenType.TSTEQ) {
+            tokenList.pop();
+            // in tree
+            return;
+        } else if (tokenList.peek().getType() == TokenType.TDVEQ) {
+            tokenList.pop();
+            // in tree
+            return;
+        }
+        // Critical error
+    }
+
+    // <iostat> ::= input <vlist> | print <prlist> | printline <prlist>
+    private void iostat() {
+        if (tokenList.peek().getType() == TokenType.TINPT) {
+
+            tokenList.pop(); // input
+
+            vlist();
+
+        } else if (tokenList.peek().getType() == TokenType.TPRNT) {
+
+            tokenList.pop(); // print
+
+            prlist();
+
+        } else if (tokenList.peek().getType() == TokenType.TPRLN) {
+
+            tokenList.pop(); // printline
+
+            prlist();
+
+        } else {
+            // Critical error
+        }
+    }
+
+    // <callstat> ::= <id> ( <callstattail>
+    private void callstat() {
+
+        Token idToken = tokenList.pop();
+
+        if (idToken.getType() != TokenType.TIDEN) {
+            // Critical error
+            return;
+        }
+
+        if (tokenList.peek().getType() != TokenType.TLPAR) {
+            // Critical error
+            return;
+        }
+
+        tokenList.pop(); // (
+
+        callstattail();
+    }
+
+    // <callstattail> ::= <elist> ) | )
+    private void callstattail() {
+
+        if (tokenList.peek().getType() == TokenType.TRPAR) {
+
+            tokenList.pop(); // )
+
+        } else {
+
+            elist();
+
+            if (tokenList.peek().getType() != TokenType.TRPAR) {
+                // Critical error
+                return;
+            }
+
+            tokenList.pop(); // )
+
+        }
+    }
+
+    // <returnstat> ::= return void | return <expr>
+    private void returnstat() {
+        if (tokenList.peek().getType() == TokenType.TRETN) {
+
+            tokenList.pop(); // return
+
+            if (tokenList.peek().getType() == TokenType.TVOID) {
+
+                tokenList.pop(); // void
+
+            } else {
+
+                expr();
+
+            }
+
+        } else {
+            // Critical error
+        }
+    }
+    // <vlist> ::= <var> <vlisttail>
+    private void vlist() {
+        var();
+        vlisttail();
+    }
+    // <vlisttail> ::= , <vlisttail> | ε
+    private void vlisttail() {
+        if (tokenList.peek().getType() == TokenType.TCOMA) {
+
+            tokenList.pop(); // ,
+
+            vlisttail();
+
+        } else {
+            // Eee
+        }
+    }
+    // <var> ::= <id><vartail>
+    private void var() {
+        Token idToken = tokenList.pop();
+        if (idToken.getType() != TokenType.TIDEN) {
+            // Critical error
+            return;
+        }
+        vartail();
+    }
+    // <vartail> ::= [<expr>]<vartailtail> | ε
+    private void vartail() {
+        if (tokenList.peek().getType() == TokenType.TLBRK) {
+
+            tokenList.pop(); // [
+
+            expr();
+
+            if (tokenList.peek().getType() != TokenType.TRBRK) {
+                // Critical error
+                return;
+            }
+
+            tokenList.pop(); // ]
+
+            vartailtail();
+
+        } else {
+            // Eee
+        }
+    }
+    // <vartailtail> ::= . <id> | ε
+    private void vartailtail() {
+        if (tokenList.peek().getType() == TokenType.TDOTT) {
+
+            tokenList.pop(); // .
+
+            Token idToken = tokenList.pop();
+
+            if (idToken.getType() != TokenType.TIDEN) {
+                // Critical error
+                return;
+            }
+
+        } else {
+            // Eee
+        }
+    }
+    // <elist> ::= <bool> <elisttail>
+    private void elist() {
+        boolParse();
+        elisttail();
+    }
+    // <elisttail> ::= , <elist> | ε
+    private void elisttail() {
+        if (tokenList.peek().getType() == TokenType.TCOMA) {
+
+            tokenList.pop(); // ,
+
+            elist();
+
+        } else {
+            // Eee
+        }
+    }
+    // <bool> ::= not <bool> | <bool><logop> <rel> | <rel>
+    private void boolParse() {
+        if (tokenList.peek().getType() == TokenType.TNOTT) {
+
+            tokenList.pop(); // not
+
+            boolParse();
+
+        } else {
+
+            rel();
+
+            if (tokenList.peek().getType() == TokenType.TTAND || 
+                tokenList.peek().getType() == TokenType.TTTOR || 
+                tokenList.peek().getType() == TokenType.TTXOR) {
+
+                tokenList.pop(); // logop
+
+                rel();
+
+            }
+
+        }
+    }
+    // <rel> ::= <expr> <reltail>
+    private void rel() {
+        expr();
+        reltail();
+    }
+    // <reltail> ::= <relop><expr> | ε
+    private void reltail() {
+        if (tokenList.peek().getType() == TokenType.TEQEQ || 
+            tokenList.peek().getType() == TokenType.TNEQL || 
+            tokenList.peek().getType() == TokenType.TGRTR || 
+            tokenList.peek().getType() == TokenType.TLEQL || 
+            tokenList.peek().getType() == TokenType.TLESS || 
+            tokenList.peek().getType() == TokenType.TGEQL) {
+
+            relop();
+
+            expr();
+
+        } else {
+            // Eeeeee ee eee eee eee
+        }
+    }
+    // <logop> ::= and | or | xor
+    private void logop() {
+        if (tokenList.peek().getType() == TokenType.TTAND) {
+
+            tokenList.pop(); // and
+
+            return;
+        } else if (tokenList.peek().getType() == TokenType.TTTOR) {
+
+            tokenList.pop(); // or
+
+            return;
+        } else if (tokenList.peek().getType() == TokenType.TTXOR) {
+
+            tokenList.pop(); // xor
+
+            return;
+        }
+        // Critical error
+    }
+    // <relop> ::= == | != | > | <= | < | >=
+    private void relop() {
+        if (tokenList.peek().getType() == TokenType.TEQEQ) {
+
+            // treeeeeeeee
+
+            tokenList.pop(); // ==
+
+            return;
+        } else if (tokenList.peek().getType() == TokenType.TNEQL) {
+
+            // treeeeeeeee
+
+            tokenList.pop(); // !=
+
+            return;
+        } else if (tokenList.peek().getType() == TokenType.TGRTR) {
+
+            // treeeeeeeee
+
+            tokenList.pop(); // >
+
+            return;
+        } else if (tokenList.peek().getType() == TokenType.TLEQL) {
+
+            // treeeeeeeee
+
+            tokenList.pop(); // <=
+
+            return;
+        } else if (tokenList.peek().getType() == TokenType.TLESS) {
+
+            // treeeeeeeee
+
+            tokenList.pop(); // <
+
+            return;
+        } else if (tokenList.peek().getType() == TokenType.TGEQL) {
+
+            // treeeeeeeee
+
+            tokenList.pop(); // >=
+
+            return;
+        }
+        // Critical error
+    }
+
+    // TODO: Expr & exprtail may be incorrect!
+    // <expr> ::= <term> <exprtail>
+    private void expr() {
+        term();
+        exprtail();
+    }
+    // <exprtail> ::= + <expr> | - <expr> | ε
+    private void exprtail() {
+        if (tokenList.peek().getType() == TokenType.TPLUS || 
+            tokenList.peek().getType() == TokenType.TMINS) {
+
+            tokenList.pop(); // + or -
+
+            expr();
+
+        } else {
+            // Eee
+        }
+    }
+    // TODO: Term & termtail may be incorrect!
+    // <term> ::= <fact> <termtail>
+    private void term() {
+        fact();
+        termtail();
+    }
+
+    // <termtail> ::= * <term> | / <term> | ε
+    private void termtail() {
+        if (tokenList.peek().getType() == TokenType.TSTAR || 
+            tokenList.peek().getType() == TokenType.TDIVD) {
+
+            tokenList.pop(); // * or /
+
+            term();
+
+        } else {
+            // Eee
+        }
+    }
+
+    // <fact> ::= <exponent> <factPrime>
+    private void fact() {
+        exponent();
+        factPrime();
+    }
+
+    // <factPrime> ::= ^ <exponent> <factPrime> | ε
+    private void factPrime() {
+        if (tokenList.peek().getType() == TokenType.TCART) {
+
+            tokenList.pop(); // ^
+
+            exponent();
+
+            factPrime();
+
+        } else {
+            // Eee
+        }
+    }
+
+     // <exponent> ::= <exponentNotBool> | <exponentBool>
+     private void exponent() {
+        if (tokenList.peek().getType() == TokenType.TLPAR) {
+
+            exponentBool();
+
+        } else {
+
+            exponentNotBool();
+            
+        }
+    }
+
+    // <exponentNotBool> ::= <var> | <intlit> | <reallit> | <fncall> | true | false
+    private void exponentNotBool() {
+        if (tokenList.peek().getType() == TokenType.TIDEN) {
+
+            var();
+
+        } else if (tokenList.peek().getType() == TokenType.TILIT) {
+
+            tokenList.pop(); // intlit (int)
+
+        } else if (tokenList.peek().getType() == TokenType.TFLIT) {
+
+            tokenList.pop(); // reallit (float)
+
+        } else if (tokenList.peek().getType() == TokenType.TTRUE || 
+                   tokenList.peek().getType() == TokenType.TFALS) {
+
+            tokenList.pop(); // true or false
+
+        } else {
+
+            fncall();
+
+        }
+    }
+
+    // <exponentBool> ::= ( <bool> )
+    public void exponentBool() {
+            
+        if (tokenList.peek().getType() != TokenType.TLPAR) {
+            // Critical error
+            return;
+        }
+
+        tokenList.pop(); // (
+
+        boolParse();
+
+        if (tokenList.peek().getType() != TokenType.TRPAR) {
+            // Critical error
+            return;
+        }
+
+        tokenList.pop(); // )
+
+    }
+
+
+    // <fncall> ::= <id> ( <elist> ) | <id> ( )
+    private void fncall() {
+        Token idToken = tokenList.pop();
+
+        if (idToken.getType() != TokenType.TIDEN) {
+            // Critical error
+            return;
+        }
+
+        if (tokenList.peek().getType() != TokenType.TLPAR) {
+            // Critical error
+            return;
+        }
+
+        tokenList.pop(); // (
+
+        if (tokenList.peek().getType() != TokenType.TRPAR) {
+
+            elist();
+
+        }
+
+        if (tokenList.peek().getType() != TokenType.TRPAR) {
+            // Critical error
+            return;
+        }
+
+        tokenList.pop(); // )
+    }
+
+    // <prlist> ::= <printitem> <prlisttail>
+    private void prlist() {
+        printitem();
+        prlisttail();
+    }
+    
+    // <prlisttail> ::= , <prlist> | ε
+    private void prlisttail() {
+        if (tokenList.peek().getType() == TokenType.TCOMA) {
+
+            tokenList.pop(); // ,
+
+            prlist();
+
+        } else {
+            // Eee
+        }
+    }
+    
+    // <printitem> ::= <expr> | <string>
+    private void printitem() {
+        if (tokenList.peek().getType() == TokenType.TSTRG) {
+
+            // i think tree?
+
+            tokenList.pop(); // string
+
+        } else {
+
+            expr();
+
+        }
+    }
 }

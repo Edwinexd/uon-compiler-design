@@ -1,8 +1,10 @@
-public class SyntaxTreeNode
-{
-    private Token token;
+import java.util.Optional;
 
-    private SyntaxTreeNode parent;
+public class SyntaxTreeNode {
+    private TreeNodeType nodeType;
+
+    private Token nodeValue;
+    private SymbolTableRecord valueRecord;
 
     private SyntaxTreeNode firstChild;
 
@@ -10,45 +12,64 @@ public class SyntaxTreeNode
 
     private SyntaxTreeNode thirdChild;
 
-    public SyntaxTreeNode(Token tokenIn) 
-    {
-        token = tokenIn;
-        parent = null;
-        firstChild = null;
-        secondChild = null;
-        thirdChild = null;
+    public SyntaxTreeNode(TreeNodeType nodeType) {
+        this.nodeType = nodeType;
     }
 
-    public SyntaxTreeNode(Token tokenIn, SyntaxTreeNode nodeParent, SyntaxTreeNode nodeOne, SyntaxTreeNode nodeTwo, SyntaxTreeNode nodeThree) 
-    {
-        token = tokenIn;
-        parent = nodeParent;
-        firstChild = nodeOne;
-        secondChild = nodeTwo;
-        thirdChild = nodeThree;
+    public SyntaxTreeNode(TreeNodeType nodeType, Token nodeValue, SymbolTableRecord valueRecord) {
+        this.nodeType = nodeType;
+        this.nodeValue = nodeValue;
+        this.valueRecord = valueRecord;
     }
 
-    public Token getToken() {
-        return token;
+    public TreeNodeType getNodeType() {
+        return nodeType;
     }
 
-    public void setToken(Token token) {
-        this.token = token;
+    public Optional<Token> getNodeValue() {
+        return Optional.ofNullable(nodeValue);
     }
 
-    public void setFirstChild(SyntaxTreeNode child)
-    {
+    public void setNodeValue(Token token) {
+        this.nodeValue = token;
+    }
+
+    public Optional<SymbolTableRecord> getValueRecord() {
+        return Optional.ofNullable(valueRecord);
+    }
+
+    public void setValueRecord(SymbolTableRecord record) {
+        this.valueRecord = record;
+    }
+
+    public void setFirstChild(SyntaxTreeNode child) {
         firstChild = child;
     }
 
-    public void setSecondChild(SyntaxTreeNode child)
-    {
+    public void setSecondChild(SyntaxTreeNode child) {
         secondChild = child;
     }
 
-    public void setThirdChild(SyntaxTreeNode child)
-    {
+    public void setThirdChild(SyntaxTreeNode child) {
         thirdChild = child;
+    }
+
+    public Optional<SyntaxTreeNode> getFirstChild() {
+        return Optional.ofNullable(firstChild);
+    }
+
+    public Optional<SyntaxTreeNode> getSecondChild() {
+        return Optional.ofNullable(secondChild);
+    }
+
+    public Optional<SyntaxTreeNode> getThirdChild() {
+        return Optional.ofNullable(thirdChild);
+    }
+
+    // TODO: A proper toString method
+    @Override
+    public String toString() {
+        return nodeType.toString();
     }
 
 }
