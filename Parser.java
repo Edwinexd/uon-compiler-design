@@ -296,9 +296,9 @@ public class Parser
         }
         Token peekToken = tokenList.peek();
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(peekToken.getLexeme(), peekToken);
-        if (record.getDeclarationType().isPresent() && record.getDeclarationType().get() == DeclarationType.STRUCT) {
+        if (record.getDeclarationType().isPresent() && record.getDeclarationType().get() == DeclarationType.STRUCT_TYPE) {
             return typestruct();
-        } else if (record.getDeclarationType().isPresent() && record.getDeclarationType().get() == DeclarationType.ARRAY) {
+        } else if (record.getDeclarationType().isPresent() && record.getDeclarationType().get() == DeclarationType.ARRAY_TYPE) {
             return typetype();
         }
         throw new RuntimeException("Critical error, expected a struct or array type");
@@ -312,7 +312,7 @@ public class Parser
         }
         Token idToken = tokenList.pop();
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
-        record.setDeclarationType(DeclarationType.STRUCT);
+        record.setDeclarationType(DeclarationType.STRUCT_TYPE);
         node.setNodeValue(idToken);
         node.setValueRecord(record);
         if (tokenList.peek().getType() != TokenType.TTDEF) {
@@ -405,6 +405,8 @@ public class Parser
         }
         tokenList.pop(); // :
         TreeNodeType outType;
+        // TODO: It makes no sence for this to return a treenode, rather we are interesting which type or structid it is
+        // TODO: we somehow need to save that id is of the struct structid
         SyntaxTreeNode stypeOrStructidNode = stypeOrStructid();
         if (stypeOrStructidNode.getNodeValue().get().getType() == TokenType.TIDEN) {
             // NSDECL
@@ -415,6 +417,7 @@ public class Parser
         }
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
         // TODO: Not sure what this ones declaration type should be
+        // for structs: we need to reference *which* struct it is 
         record.setDeclarationType(null);
         SyntaxTreeNode node = new SyntaxTreeNode(outType, idToken, record);
         node.setFirstChild(stypeOrStructidNode);
@@ -747,7 +750,7 @@ public class Parser
         if (tokenList.peek().getType() == TokenType.TIDEN) {
             Token idToken = tokenList.pop();
             SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
-            if (record.getDeclarationType().isPresent() && record.getDeclarationType().get() != DeclarationType.STRUCT) {
+            if (record.getDeclarationType().isPresent() && record.getDeclarationType().get() != DeclarationType.STRUCT_TYPE) {
                 // TODO Incorrect type
                 throw new RuntimeException("Critical error, expected a struct identifier");
             }

@@ -2,9 +2,20 @@ public enum DeclarationType {
     PROGRAM,
     CONSTANT,
     FUNCTION,
+    // this should rather be STRUCT_TYPE
+    STRUCT_TYPE,
+    // and this could just be STRUCT i.e. an instance of a struct
     STRUCT,
-    ARRAY, // Since this also confuses me, this is the equivilance of typeid in the grammar ...
+    ARRAY_TYPE, // Since this also confuses me, this is the equivilance of typeid in the grammar ...
+    ARRAY,
     INT,
     FLOAT,
     BOOL;
+
+    public boolean requiresSymbolTableRecord() {
+        return this == ARRAY || this == STRUCT;
+    }
+
+
+    // if instance struct we need to keep track of the symbol table record that defines the struct
 }
