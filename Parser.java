@@ -107,6 +107,7 @@
 // <id>, <structid>, <typeid> are all simply identifier tokens returned by the scanner.
 // <intlit>, <reallit> and <string> are also special tokens returned by the scanner.
 
+import java.util.Arrays;
 import java.util.LinkedList;
 
 // We are intentionally breaking naming conventions here to match the CD24 grammar
@@ -126,7 +127,7 @@ public class Parser
         SyntaxTreeNode syntaxTree = programParse();
     }
 
-    // <program> ::= CD24 <id> <globals> <funcs> <mainbody>
+    //#region <program> ::= CD24 <id> <globals> <funcs> <mainbody>
     private SyntaxTreeNode programParse()
     {
 
@@ -167,9 +168,9 @@ public class Parser
 
         return rootNode;
     }
+    //endregion
 
-
-    // <globals> ::= <consts> <types> <arrays>
+    //#region <globals> ::= <consts> <types> <arrays>
     private SyntaxTreeNode globals() {
         SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NGLOB);
         if (tokenList.peek().getType() == TokenType.TCONS) {
@@ -186,8 +187,9 @@ public class Parser
         }
         return node;
     }
+    //endregion
 
-    // <consts> ::= constants <initlist> | ε
+    //#region <consts> ::= constants <initlist> | ε
     private SyntaxTreeNode consts() {
         // this does not produce its own node and just returns the initlist node
         if (tokenList.peek().getType() != TokenType.TCONS) {
@@ -198,8 +200,9 @@ public class Parser
         tokenList.pop(); // constants
         return initlist();
     }
+    //endregion
 
-    // <initlist> ::= <init> <initlisttail>
+    //#region <initlist> ::= <init> <initlisttail>
     private SyntaxTreeNode initlist() {
         SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NILIST);
         node.setFirstChild(init());
@@ -210,29 +213,39 @@ public class Parser
         }
         return node;
     }
+    //endregion
 
-    // <initlisttail> ::= , <init> <initslisttail> | ε
+    //#region <initlisttail> ::= , <init> <initslisttail> | ε
     private SyntaxTreeNode initlisttail() {
+
         if (tokenList.peek().getType() != TokenType.TCOMA) {
             // this is an epsilon production
             return null;
         }
+
         tokenList.pop(); // ,
+
         SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NILIST);
+
         node.setFirstChild(init());
+
         SyntaxTreeNode tail = initlisttail();
+
         if (tail != null) {
             node.setThirdChild(tail);
         }
+
         return node;
     }
+    //endregion
 
-    // <init> ::= <id> = <expr>
+    //#region <init> ::= <id> = <expr>
     private SyntaxTreeNode init() {
         // pop the id token
         if (tokenList.peek().getType() != TokenType.TIDEN) {
             // Should not really have been called
-            throw new RuntimeException("Critical error, this function should not have been called");
+            //throw new RuntimeException("Critical error, this function should not have been called");
+            popTillTokenType(TokenType.TIDEN);
         }
         Token idToken = tokenList.pop();
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
@@ -240,27 +253,36 @@ public class Parser
         record.setDeclarationType(DeclarationType.CONSTANT);
 
         if (tokenList.peek().getType() != TokenType.TEQUL) {
-            throw new RuntimeException("Invalid syntax, expected =");
+            //throw new RuntimeException("Invalid syntax, expected =");
+            popTillTokenType(TokenType.TEQUL);
         }
+
         tokenList.pop(); // =
 
         SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NINIT, idToken, record);
+
         node.setFirstChild(expr());
+
         return node;
     }
+    //endregion
 
-    // <types> ::= typedef <typelist> | ε
+    //#region <types> ::= typedef <typelist> | ε
     private SyntaxTreeNode types() {
         // this does not produce its own node and just returns the typelist node
         if (tokenList.peek().getType() != TokenType.TTYPD) {
             // Critical error, this function should not have been called
-            throw new RuntimeException("Critical error, this function should not have been called");
+            //throw new RuntimeException("Critical error, this function should not have been called");
+            popTillTokenType(TokenType.TTYPD);
         }
+
         tokenList.pop(); // typedef
+
         return typelist();
     }
+    //endregion
 
-    // <typelist> ::= <type> <typelisttail>
+    //#region <typelist> ::= <type> <typelisttail>
     private SyntaxTreeNode typelist() {
         SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NTYPEL);
         node.setFirstChild(type());
@@ -270,8 +292,9 @@ public class Parser
         }
         return node;
     }
+    //#endregion
 
-    // <typelisttail> ::= <type> <typelisttail> | ε
+    //#region <typelisttail> ::= <type> <typelisttail> | ε
     private SyntaxTreeNode typelisttail() {
         if (tokenList.peek().getType() != TokenType.TIDEN) {
             // this is an epsilon production
@@ -285,14 +308,16 @@ public class Parser
         }
         return node;
     }
+    //#endregion
 
-    // <type> ::= N/A (choosing which type to parse based on lookahead)
+    //#region <type> ::= N/A (choosing which type to parse based on lookahead)
     /*
      * More or less a "proxy" for calling the correct type function.
      */
     private SyntaxTreeNode type() {
         if (tokenList.peek().getType() != TokenType.TIDEN) {
-            throw new RuntimeException("Critical error, expected an identifier");
+            //throw new RuntimeException("Critical error, expected an identifier");
+            popTillTokenType(TokenType.TIDEN);
         }
         Token peekToken = tokenList.peek();
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(peekToken.getLexeme(), peekToken);
@@ -302,13 +327,16 @@ public class Parser
             return typetype();
         }
         throw new RuntimeException("Critical error, expected a struct or array type");
+        // TODO: This needs a recovery method like the other one but with decloration types
     }
+    //#endregion
 
-    // <type> ::= <structid> def <fields> end
+    //#region <type> ::= <structid> def <fields> end
     private SyntaxTreeNode typestruct() {
         SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NRTYPE);
         if (tokenList.peek().getType() != TokenType.TIDEN) {
-            throw new RuntimeException("Critical error, expected an identifier");
+            //throw new RuntimeException("Critical error, expected an identifier");
+            popTillTokenType(TokenType.TIDEN);
         }
         Token idToken = tokenList.pop();
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
@@ -316,60 +344,71 @@ public class Parser
         node.setNodeValue(idToken);
         node.setValueRecord(record);
         if (tokenList.peek().getType() != TokenType.TTDEF) {
-            throw new RuntimeException("Critical error, expected def keyword");
+            popTillTokenType(TokenType.TTDEF);
+            //throw new RuntimeException("Critical error, expected def keyword");
         }
         tokenList.pop(); // def
         node.setFirstChild(fields());
         if (tokenList.peek().getType() != TokenType.TTEND) {
-            throw new RuntimeException("Critical error, expected end keyword");
+            popTillTokenType(TokenType.TTEND);
+            //throw new RuntimeException("Critical error, expected end keyword");
         }
         tokenList.pop(); // end
         return node;
     }
+    //endregion
 
-    // <type> ::= <typeid> def array [ <expr> ] of <structid> end
+    //#region <type> ::= <typeid> def array [ <expr> ] of <structid> end
     private SyntaxTreeNode typetype() {
         Token idToken = tokenList.pop();
         if (idToken.getType() != TokenType.TIDEN) {
+            popTillTokenType(TokenType.TIDEN);
             // Critical error
             return;
         }
         if (tokenList.peek().getType() != TokenType.TTDEF) {
+            popTillTokenType(TokenType.TTDEF);
             // Critical error
             return;
         }
         tokenList.pop(); // dont care about def keyword just has to be there
         if (tokenList.peek().getType() != TokenType.TARAY) {
+            popTillTokenType(TokenType.TARAY);
             // Critical error
             return;
         }
         tokenList.pop(); // dont care about array keyword just has to be there
         if (tokenList.peek().getType() != TokenType.TLBRK) {
+            popTillTokenType(TokenType.TLBRK);
             // Critical error
             return;
         }
         tokenList.pop(); // dont care about left bracket keyword just has to be there
         var exprNode = expr();
         if (tokenList.peek().getType() != TokenType.TRBRK) {
+            popTillTokenType(TokenType.TRBRK);
             // Critical error
             return;
         }
         tokenList.pop(); // dont care about right bracket keyword just has to be there
         if (tokenList.peek().getType() != TokenType.TTTOF) {
+            popTillTokenType(TokenType.TTTOF);
             // Critical error
             return;
         }
         tokenList.pop(); // dont care about of keyword just has to be there
         var structidNode = structid();
-        if (tokenList.peek().getType() != TokenType.TEND) {
+        if (tokenList.peek().getType() != TokenType.TTEND) {
+            popTillTokenType(TokenType.TTEND);
             // Critical error
             return;
         }
         tokenList.pop(); // dont care about end keyword just has to be there
         // TODO Build tree node which will consist of idToken node, exprNode, and structidNode
     }
+    //endregion
 
-    // <fields> ::= <sdecl> <fieldstail>
+    //#region <fields> ::= <sdecl> <fieldstail>
     private SyntaxTreeNode fields() {
         SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NFLIST);
         node.setFirstChild(sdecl());
@@ -379,8 +418,9 @@ public class Parser
         }
         return node;
     }
+    //endregion
 
-    // <fieldstail> ::= <sdecl> <fieldstail> | ε
+    //#region <fieldstail> ::= <sdecl> <fieldstail> | ε
     private SyntaxTreeNode fieldstail() {
         if (tokenList.peek().getType() != TokenType.TIDEN) {
             return null;
@@ -393,15 +433,18 @@ public class Parser
         }
         return node;
     }
+    //endregion
 
-    // <sdecl> ::= <id> : <stypeOrStructid>
+    //#region <sdecl> ::= <id> : <stypeOrStructid>
     private SyntaxTreeNode sdecl() {
         if (tokenList.peek().getType() != TokenType.TIDEN) {
-            throw new RuntimeException("Critical error, expected an identifier");
+            popTillTokenType(TokenType.TIDEN);
+            //throw new RuntimeException("Critical error, expected an identifier");
         }
         Token idToken = tokenList.pop();
         if (tokenList.peek().getType() != TokenType.TCOLN) {
-            throw new RuntimeException("Critical error, expected colon");
+            popTillTokenType(TokenType.TCOLN);
+            //throw new RuntimeException("Critical error, expected colon");
         }
         tokenList.pop(); // :
         TreeNodeType outType;
@@ -421,25 +464,25 @@ public class Parser
         return node;
 
     }
+    //endregion
 
-    // <arrays> ::= arraydef <arrdecls> | ε
+    //#region <arrays> ::= arraydef <arrdecls> | ε
     private SyntaxTreeNode arrays() {
-        if (tokenList.peek().getType() == TokenType.TARRD) {
-            arrdecls();
-            return;
+        if (tokenList.peek().getType() != TokenType.TARRD) {
+            popTillTokenType(TokenType.TARRD);
         }
-        // Critical error, this function should not have been called
+        arrdecls();
     }
+    //endregion
 
-
-
-    // <arrdecls> ::= <arrdecl> <arrdeclstail>
+    //#region <arrdecls> ::= <arrdecl> <arrdeclstail>
     private SyntaxTreeNode arrdecls() {
         arrdecl();
         arrdeclstail();
     }
+    //endregion
 
-    // <arrdeclstail> ::= , <arrdecl> <arrdeclstail> | ε 
+    //#region <arrdeclstail> ::= , <arrdecl> <arrdeclstail> | ε 
     private SyntaxTreeNode arrdeclstail() {
         if (tokenList.peek().getType() == TokenType.TCOMA) {
             tokenList.pop();
@@ -448,71 +491,75 @@ public class Parser
         }
         // this is an epsilon production
     }
+    //endregion
 
-    // <arrdecl> ::= <id> : <typeid>
+    //#region <arrdecl> ::= <id> : <typeid>
     private SyntaxTreeNode arrdecl() {
         Token idToken = tokenList.pop();
         if (idToken.getType() != TokenType.TIDEN) {
             // Critical error
-            return;
+            popTillTokenType(TokenType.TIDEN);
         }
         if (tokenList.peek().getType() != TokenType.TCOLN) {
             // Critical error
-            return;
+            popTillTokenType(TokenType.TCOLN);
         }
         tokenList.pop(); // dont care about colon keyword just has to be there
         if (tokenList.peek().getType() != TokenType.TIDEN) {
             // Critical error
-            return;
+            popTillTokenType(TokenType.TIDEN);
         }
         Token idToken2 = tokenList.pop();
         // TODO Build tree node which will consist of idToken node and idToken2 node
 
     }
+    //endregion
 
-    // <funcs> ::= <funcPrime> 
+    //#region <funcs> ::= <funcPrime> 
     private SyntaxTreeNode funcs() {
         funcsPrime();
     }
+    //endregion
 
-    // <funcPrime> ::= <func> <funcPrime> | ε
-    private void funcsPrime() {
+    //#region <funcPrime> ::= <func> <funcPrime> | ε
+    private SyntaxTreeNode funcsPrime() {
         if (tokenList.peek().getType() == TokenType.TFUNC) {
             func();
             funcsPrime();
         }
         // this is an epsilon production
     }
+    //endregion
 
-    // <func> ::= func <id> ( <plist> ) : <rtype> <funcbody>
-    private void func() {
+    //#region <func> ::= func <id> ( <plist> ) : <rtype> <funcbody>
+    private SyntaxTreeNode func() {
         if (tokenList.peek().getType() != TokenType.TFUNC) {
             // Critical error
-            return;
+            popTillTokenType(TokenType.TFUNC);
         }
         tokenList.pop(); // dont care about func keyword just has to be there
         Token idToken = tokenList.pop();
         if (idToken.getType() != TokenType.TIDEN) {
             // Critical error
-            return;
+            popTillTokenType(TokenType.TIDEN);
         }
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
         record.setDeclarationType(DeclarationType.FUNCTION);
         if (tokenList.peek().getType() != TokenType.TLPAR) {
             // Critical error
-            return;
+            popTillTokenType(TokenType.TLPAR);
         }
         tokenList.pop(); // dont care about left parenthesis keyword just has to be there
         // TODO: Should be part of func parameters + scope
         plist();
         if (tokenList.peek().getType() != TokenType.TRPAR) {
             // Critical error
-            return;
+            popTillTokenType(TokenType.TRPAR);
         }
         tokenList.pop(); // dont care about right parenthesis keyword just has to be there
         if (tokenList.peek().getType() != TokenType.TCOLN) {
             // Critical error
-            return;
+            popTillTokenType(TokenType.TCOLN);
         }
         tokenList.pop(); // dont care about colon keyword just has to be there
         rtype();
@@ -524,9 +571,10 @@ public class Parser
 
         // TODO: Build tree node of bunch of stuff
     }
+    //endregion
 
-    // <rtype> ::= <stype> | void
-    private void rtype() {
+    //#region <rtype> ::= <stype> | void
+    private SyntaxTreeNode rtype() {
         if (tokenList.peek().getType() == TokenType.TVOID) {
             tokenList.pop();
             return;
@@ -534,25 +582,27 @@ public class Parser
         stype();
 
     }
+    //endregion
 
-    // <plist> ::= <params> | ε
-    private void plist() {
-        if (tokenList.peek().getType() == TokenType.TIDEN || tokenList.peek().getType() == TokenType.TCONST) {
+    //#region <plist> ::= <params> | ε
+    private SyntaxTreeNode plist() {
+        if (tokenList.peek().getType() == TokenType.TIDEN || tokenList.peek().getType() == TokenType.TCONS) {
             params();
             return;
         }
         // this is an epsilon production
     }
-
+    //endregion
     
-    // <params> ::= <param> <paramsPrime>
-    private void params() {
+    //#region <params> ::= <param> <paramsPrime>
+    private SyntaxTreeNode params() {
         param();
         paramsPrime();
     }
+    //endregion
 
-    // <paramsPrime> ::= , <param> <paramsPrime> | ε
-    private void paramsPrime() {
+    //#region <paramsPrime> ::= , <param> <paramsPrime> | ε
+    private SyntaxTreeNode paramsPrime() {
         if (tokenList.peek().getType() == TokenType.TCOMA) {
             tokenList.pop();
             param();
@@ -560,35 +610,38 @@ public class Parser
         }
         // this is an epsilon production
     }
+    //endregion
 
-    // <param> ::= <parammaybeconst> <id> : <paramtail>
-    private void param() {
+    //#region <param> ::= <parammaybeconst> <id> : <paramtail>
+    private SyntaxTreeNode param() {
         // TODO: Remember that param is const (if it is)
         parammaybeconst();
         Token idToken = tokenList.pop();
         if (idToken.getType() != TokenType.TIDEN) {
             // Critical error
-            return;
+            popTillTokenType(TokenType.TIDEN);
         }
         if (tokenList.peek().getType() != TokenType.TCOLN) {
             // Critical error
-            return;
+            popTillTokenType(TokenType.TCOLN);
         }
         tokenList.pop(); // dont care about colon keyword just has to be there
         paramtail();
     }
+    //endregion
 
-    // <parammaybeconst> ::= const | ε
-    private void parammaybeconst() {
+    //#region <parammaybeconst> ::= const | ε
+    private SyntaxTreeNode parammaybeconst() {
         if (tokenList.peek().getType() == TokenType.TCONS) {
             tokenList.pop();
             return;
         }
         // this is an epsilon production
     }
+    //endregion
 
-    // <paramtail> ::= <typeid> | <stypeOrStructid>
-    private void paramtail() {
+    //#region <paramtail> ::= <typeid> | <stypeOrStructid>
+    private SyntaxTreeNode paramtail() {
         // TODO: No idea how to differentiate between them all
         if (tokenList.peek().getType() == TokenType.TIDEN) {
             typeid();
@@ -596,45 +649,45 @@ public class Parser
         }
         stypeOrStructid();
     }
+    //endregion
 
-    // <funcbody> ::= <locals> begin <stats> end
-    private void funcbody() {
+    //#region <funcbody> ::= <locals> begin <stats> end
+    private SyntaxTreeNode funcbody() {
         locals();
         if (tokenList.peek().getType() != TokenType.TBEGN) {
             // Critical error
-            return;
+            popTillTokenType(TokenType.TBEGN);
         }
         tokenList.pop();
 
         stats();
         if (tokenList.peek().getType() != TokenType.TTEND) {
             // Critical error
-            return;
+            popTillTokenType(TokenType.TTEND);
         }
         tokenList.pop();
 
     }
+    //endregion
 
-    // <locals> ::= <dlist> | ε
-    private void locals() {
+    //#region <locals> ::= <dlist> | ε
+    private SyntaxTreeNode locals() {
         if (tokenList.peek().getType() == TokenType.TIDEN) {
             dlist();
         }
 
         // fancy e thing
-
     }
-
+    //endregion
     
-    // <dlist> ::= <decl> <dlistPrime>
+    //#region <dlist> ::= <decl> <dlistPrime>
     private void dlist() {
         decl();
         dlistPrime();
-
     }
+    //endregion
 
-    
-    // <dlistPrime> ::= , <dlist> | ε
+    //#region <dlistPrime> ::= , <dlist> | ε
     private void dlistPrime() {
         if (tokenList.peek().getType() == TokenType.TCOMA) {
             tokenList.pop();
@@ -643,19 +696,19 @@ public class Parser
 
         // fancy e thang
     }
+    //endregion
 
-    
-    // <decl> ::=  <id> : <decltail>
+    //#region <decl> ::=  <id> : <decltail>
     private void decl() {
         Token idToken = tokenList.pop();
 
         if (idToken.getType() != TokenType.TIDEN) {
             // Critical error
-            return;
+            popTillTokenType(TokenType.TIDEN);
         }
         if (tokenList.peek().getType() != TokenType.TCOLN) {
             // Critical error
-            return;
+            popTillTokenType(TokenType.TCOLN);
         }
 
         tokenList.pop(); // :
@@ -663,9 +716,10 @@ public class Parser
         decltail();
 
     }
+    //endregion
 
-    // <decltail> ::= <typeid> | <stypeOrStructid>
-    private void decltail() {
+    //#region <decltail> ::= <typeid> | <stypeOrStructid>
+    private SyntaxTreeNode decltail() {
 
         if (tokenList.peek().getType() == TokenType.TIDEN) {
             Token idToken = tokenList.pop();
@@ -675,14 +729,14 @@ public class Parser
         stypeOrStructid();
 
     }
+    //endregion
 
-
-    // <mainbody> ::= main <slist> begin <stats> end CD24 <id>
+    //#region <mainbody> ::= main <slist> begin <stats> end CD24 <id>
     private SyntaxTreeNode mainbody() {
 
         if (tokenList.peek().getType() != TokenType.TMAIN) {
             // Critical error
-            return;
+            popTillTokenType(TokenType.TMAIN);
         }
 
         tokenList.pop(); // main
@@ -691,7 +745,7 @@ public class Parser
 
         if (tokenList.peek().getType() != TokenType.TBEGN) {
             // Critical error
-            return;
+            popTillTokenType(TokenType.TBEGN);
         }
 
         tokenList.pop(); // begin
@@ -700,14 +754,14 @@ public class Parser
 
         if (tokenList.peek().getType() != TokenType.TTEND) {
             // Critical error
-            return;
+            popTillTokenType(TokenType.TTEND);
         }
 
         tokenList.pop(); // end
 
         if (tokenList.peek().getType() != TokenType.TCD24) {
             // Critical error
-            return;
+            popTillTokenType(TokenType.TCD24);
         }
 
         tokenList.pop(); // CD24
@@ -716,19 +770,21 @@ public class Parser
 
         if (idToken.getType() != TokenType.TIDEN) {
             // Critical error
-            return;
+            popTillTokenType(TokenType.TIDEN);
         }
 
     }
+    //endregion
     
-    // <slist> ::= <sdecl> <slistPrime>
-    private void slist() {
+    //#region <slist> ::= <sdecl> <slistPrime>
+    private SyntaxTreeNode slist() {
         sdecl();
         slistPrime();
     }
+    //endregion
 
-    // <slistPrime> ::= , <sdecl> <slistPrime> | ε
-    private void slistPrime() {
+    //#region <slistPrime> ::= , <sdecl> <slistPrime> | ε
+    private SyntaxTreeNode slistPrime() {
         if (tokenList.peek().getType() == TokenType.TCOMA) {
             tokenList.pop();
             sdecl();
@@ -738,8 +794,9 @@ public class Parser
         //// eeeeeee bruv
 
     }
+    //endregion
 
-    // <stypeOrStructid> ::= <stype> | <structid>
+    //#region <stypeOrStructid> ::= <stype> | <structid>
     private SyntaxTreeNode stypeOrStructid() {
         if (tokenList.peek().getType() == TokenType.TINTG || tokenList.peek().getType() == TokenType.TFLOT || tokenList.peek().getType() == TokenType.TBOOL) {
             return stype();
@@ -750,12 +807,16 @@ public class Parser
             if (record.getDeclarationType().isPresent() && record.getDeclarationType().get() != DeclarationType.STRUCT) {
                 // TODO Incorrect type
                 throw new RuntimeException("Critical error, expected a struct identifier");
+                //popTillTokenType(TokenType.STRUCT);
+                // TODO: Recovery method
             }
             return new SyntaxTreeNode(TreeNodeType.SpecialTODO, idToken, record);
         }
         throw new RuntimeException("Critical error, expected a struct identifier or a type");
+        popTillTokenType(new LinkedList<TokenType>(Arrays.asList(TokenType.TINTG, TokenType.TFLOT, TokenType.TBOOL, TokenType.TIDEN)));
 
     }
+    //endregion
 
     // <stype> ::= int | float | bool
     private SyntaxTreeNode stype() {
@@ -1691,4 +1752,17 @@ public class Parser
 
         }
     }
+
+    private void popTillTokenType(TokenType type) {
+        while (tokenList.peek().getType() != type) {
+            tokenList.pop();
+        }
+    }
+
+    private void popTillTokenType(LinkedList<TokenType> types) {
+        while (!types.contains(tokenList.peek().getType())) {
+            tokenList.pop();
+        }
+    }
+
 }
