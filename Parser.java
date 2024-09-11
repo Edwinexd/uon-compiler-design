@@ -141,7 +141,7 @@ public class Parser
         }
         Token idToken = tokenList.pop();
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
-        record.setDeclarationType(DeclarationType.PROGRAM);
+        record.setDeclaration(Declaration.PROGRAM);
         SyntaxTreeNode rootNode = new SyntaxTreeNode(TreeNodeType.NPROG, idToken, record);
 
         // Global
@@ -237,7 +237,7 @@ public class Parser
         Token idToken = tokenList.pop();
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
         // TODO Check if declarationtype here should be constant or int/float/bool etc.
-        record.setDeclarationType(DeclarationType.CONSTANT);
+        record.setDeclaration(Declaration.CONSTANT);
 
         if (tokenList.peek().getType() != TokenType.TEQUL) {
             throw new RuntimeException("Invalid syntax, expected =");
@@ -296,9 +296,9 @@ public class Parser
         }
         Token peekToken = tokenList.peek();
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(peekToken.getLexeme(), peekToken);
-        if (record.getDeclarationType().isPresent() && record.getDeclarationType().get() == DeclarationType.STRUCT_TYPE) {
+        if (record.getDeclaration().isPresent() && record.getDeclaration().get() == DeclarationType.STRUCT_TYPE) {
             return typestruct();
-        } else if (record.getDeclarationType().isPresent() && record.getDeclarationType().get() == DeclarationType.ARRAY_TYPE) {
+        } else if (record.getDeclaration().isPresent() && record.getDeclaration().get() == DeclarationType.ARRAY_TYPE) {
             return typetype();
         }
         throw new RuntimeException("Critical error, expected a struct or array type");
@@ -312,7 +312,7 @@ public class Parser
         }
         Token idToken = tokenList.pop();
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
-        record.setDeclarationType(DeclarationType.STRUCT_TYPE);
+        record.setDeclaration(Declaration.STRUCT_TYPE);
         node.setNodeValue(idToken);
         node.setValueRecord(record);
         if (tokenList.peek().getType() != TokenType.TTDEF) {
@@ -405,10 +405,8 @@ public class Parser
         }
         tokenList.pop(); // :
         TreeNodeType outType;
-        // TODO: It makes no sence for this to return a treenode, rather we are interesting which type or structid it is
-        // TODO: we somehow need to save that id is of the struct structid
-        SyntaxTreeNode stypeOrStructidNode = stypeOrStructid();
-        if (stypeOrStructidNode.getNodeValue().get().getType() == TokenType.TIDEN) {
+        Declaration typeDeclaration = stypeOrStructid();
+        if (typeDeclaration.isPrimitive()) {
             // NSDECL
             outType = TreeNodeType.NSDECL;
         } else {
@@ -416,13 +414,9 @@ public class Parser
             outType = TreeNodeType.NTDECL;
         }
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
-        // TODO: Not sure what this ones declaration type should be
-        // for structs: we need to reference *which* struct it is 
-        record.setDeclarationType(null);
+        record.setDeclaration(typeDeclaration);
         SyntaxTreeNode node = new SyntaxTreeNode(outType, idToken, record);
-        node.setFirstChild(stypeOrStructidNode);
         return node;
-
     }
 
     // <arrays> ::= arraydef <arrdecls> | ε
@@ -500,7 +494,7 @@ public class Parser
             return;
         }
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
-        record.setDeclarationType(DeclarationType.FUNCTION);
+        record.setDeclaration(DeclarationType.FUNCTION);
         if (tokenList.peek().getType() != TokenType.TLPAR) {
             // Critical error
             return;
@@ -743,21 +737,26 @@ public class Parser
     }
 
     // <stypeOrStructid> ::= <stype> | <structid>
-    private SyntaxTreeNode stypeOrStructid() {
-        if (tokenList.peek().getType() == TokenType.TINTG || tokenList.peek().getType() == TokenType.TFLOT || tokenList.peek().getType() == TokenType.TBOOL) {
-            return stype();
+    private Declaration stypeOrStructid() {
+        Token peekedToken = tokenList.peek();
+        TokenType peekedType = peekedToken.getType();
+        if (peekedType == TokenType.TINTG) {
+            return Declaration.INT;
+        } else if (peekedType == TokenType.TFLOT) {
+            return Declaration.FLOAT;
+        } else if (peekedType == TokenType.TBOOL) {
+            return Declaration.BOOL;
         }
-        if (tokenList.peek().getType() == TokenType.TIDEN) {
-            Token idToken = tokenList.pop();
-            SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
-            if (record.getDeclarationType().isPresent() && record.getDeclarationType().get() != DeclarationType.STRUCT_TYPE) {
-                // TODO Incorrect type
-                throw new RuntimeException("Critical error, expected a struct identifier");
-            }
-            return new SyntaxTreeNode(TreeNodeType.SpecialTODO, idToken, record);
+        if (peekedType != TokenType.TIDEN) {
+            throw new RuntimeException("Critical error, expected a struct identifier or a type");
         }
-        throw new RuntimeException("Critical error, expected a struct identifier or a type");
-
+        Token idToken = tokenList.pop();
+        SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
+        if (record.getDeclaration().isPresent() && !record.getDeclaration().get().equals(Declaration.STRUCT_TYPE)) {
+            // TODO Incorrect type
+            throw new RuntimeException("Critical error, expected a struct identifier");
+        }
+        return Declaration.structOfType(record);
     }
 
     // <stype> ::= int | float | bool

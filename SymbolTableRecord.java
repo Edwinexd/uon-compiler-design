@@ -9,9 +9,9 @@ public class SymbolTableRecord {
     private final TokenType type;
     private String name; // id/int/reals/strings
     private Token ogToken; // contains line info e.t.c of first declaration
-    private DeclarationType declarationType;
-    private List<SymbolTableRecord> arguments; // only present if declarationType == FUNCTION, also part of ownScope
-    private DeclarationType returnType; // only present if declarationType == FUNCTION
+    private Declaration declaration;
+    private List<SymbolTableRecord> arguments; // only present if declaration == FUNCTION, also part of ownScope
+    private Declaration returnType; // only present if declaration == FUNCTION
 
     // for later use
     private int base;
@@ -55,12 +55,12 @@ public class SymbolTableRecord {
         return offset;
     }
 
-    public Optional<DeclarationType> getDeclarationType() {
-        return Optional.ofNullable(declarationType);
+    public Optional<Declaration> getDeclaration() {
+        return Optional.ofNullable(declaration);
     }
 
-    public void setDeclarationType(DeclarationType declarationType) {
-        this.declarationType = declarationType;
+    public void setDeclaration(Declaration declaration) {
+        this.declaration = declaration;
     }
 
     public Optional<List<SymbolTableRecord>> getArguments() {
@@ -68,7 +68,7 @@ public class SymbolTableRecord {
     }
 
     public void addArgument(SymbolTableRecord argument) {
-        if (declarationType != DeclarationType.FUNCTION) {
+        if (declaration == null || !declaration.equals(Declaration.FUNCTION)) {
             throw new IllegalStateException("Cannot add arguments to a non-function record");
         }
         if (arguments == null) {
@@ -77,18 +77,16 @@ public class SymbolTableRecord {
         arguments.add(argument);
     }
 
-    public Optional<DeclarationType> getReturnType() {
+    public Optional<Declaration> getReturnType() {
         return Optional.ofNullable(returnType);
     }
 
-    public void setReturnType(DeclarationType returnType) {
-        if (declarationType != DeclarationType.FUNCTION) {
+    public void setReturnType(Declaration returnType) {
+        if (declaration == null || !declaration.equals(Declaration.FUNCTION)) {
             throw new IllegalStateException("Cannot set return type to a non-function record");
         }
         this.returnType = returnType;
     }
-
-
 
     public SymbolTable getScope() {
         // TODO: This should be restricted to function identifiers e.t.c.
