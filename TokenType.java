@@ -79,9 +79,13 @@ public enum TokenType {
     TDVEQ(63, '/', '='),
     // the tokens which need tuple values
     TIDEN(64),
+    // Integer
     TILIT(65),
+    // Float
     TFLIT(66),
+    // String
     TSTRG(67),
+    // undefined
     TUNDF(68);
 
     private final int value;
