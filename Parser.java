@@ -314,6 +314,7 @@ public class Parser
     /*
      * More or less a "proxy" for calling the correct type function.
      */
+    // TODO: This won't work since symbol table records are not set at this point!
     private SyntaxTreeNode type() {
         if (tokenList.peek().getType() != TokenType.TIDEN) {
             //throw new RuntimeException("Critical error, expected an identifier");
@@ -360,51 +361,52 @@ public class Parser
 
     //#region <type> ::= <typeid> def array [ <expr> ] of <structid> end
     private SyntaxTreeNode typetype() {
-        Token idToken = tokenList.pop();
-        if (idToken.getType() != TokenType.TIDEN) {
+        if (tokenList.peek().getType() != TokenType.TIDEN) {
             popTillTokenType(TokenType.TIDEN);
-            // Critical error
-            return;
         }
+        Token idToken = tokenList.pop();
         if (tokenList.peek().getType() != TokenType.TTDEF) {
             popTillTokenType(TokenType.TTDEF);
-            // Critical error
-            return;
         }
-        tokenList.pop(); // dont care about def keyword just has to be there
+        tokenList.pop(); // def
         if (tokenList.peek().getType() != TokenType.TARAY) {
             popTillTokenType(TokenType.TARAY);
-            // Critical error
-            return;
         }
-        tokenList.pop(); // dont care about array keyword just has to be there
+        tokenList.pop(); // array
         if (tokenList.peek().getType() != TokenType.TLBRK) {
             popTillTokenType(TokenType.TLBRK);
-            // Critical error
-            return;
         }
-        tokenList.pop(); // dont care about left bracket keyword just has to be there
-        var exprNode = expr();
+        tokenList.pop(); // [
+
+        SyntaxTreeNode exprNode = expr();
+        
         if (tokenList.peek().getType() != TokenType.TRBRK) {
             popTillTokenType(TokenType.TRBRK);
-            // Critical error
-            return;
         }
-        tokenList.pop(); // dont care about right bracket keyword just has to be there
+        tokenList.pop(); // ]
+
         if (tokenList.peek().getType() != TokenType.TTTOF) {
             popTillTokenType(TokenType.TTTOF);
-            // Critical error
-            return;
         }
-        tokenList.pop(); // dont care about of keyword just has to be there
-        var structidNode = structid();
+
+        tokenList.pop(); // of 
+
+        if (tokenList.peek().getType() != TokenType.TIDEN) {
+            popTillTokenType(TokenType.TIDEN);
+        }
+        Token structIdToken = tokenList.pop();
+        SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
+        record.setDeclaration(Declaration.arrayOfType(currentSymbolTable.getOrCreateToken(structIdToken.getLexeme(), structIdToken)));
+        
+
         if (tokenList.peek().getType() != TokenType.TTEND) {
             popTillTokenType(TokenType.TTEND);
-            // Critical error
-            return;
         }
-        tokenList.pop(); // dont care about end keyword just has to be there
-        // TODO Build tree node which will consist of idToken node, exprNode, and structidNode
+        tokenList.pop(); // end
+
+        SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NRTYPE, idToken, record);
+        node.setFirstChild(exprNode);
+        return node;
     }
     //endregion
 
