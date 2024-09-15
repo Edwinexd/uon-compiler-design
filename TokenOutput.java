@@ -10,6 +10,7 @@ public class TokenOutput {
     private FileWriter tokenOutputWriter;
     private int currentLine = 1;
     private LinkedList<String> errors = new LinkedList<String>();
+    private LinkedList<String> parserErrors = new LinkedList<String>();
 
     /// i feel like the writer opening every time might cause too much overhead
 
@@ -114,5 +115,9 @@ public class TokenOutput {
         } catch (IOException e) {
             System.err.println("Error writing to listing file: " + e.getMessage());
         }
+    }
+
+    public void feedParserError(String error) {
+        parserErrors.add(error);
     }
 }
