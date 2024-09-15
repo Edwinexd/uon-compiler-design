@@ -5,6 +5,7 @@ public class Declaration {
     public static final Declaration INT = new Declaration(DeclarationType.INT);
     public static final Declaration FLOAT = new Declaration(DeclarationType.FLOAT);
     public static final Declaration BOOL = new Declaration(DeclarationType.BOOL);
+    public static final Declaration VOID = new Declaration(DeclarationType.VOID);
     public static final Declaration STRUCT_TYPE = new Declaration(DeclarationType.STRUCT_TYPE);
     public static final Declaration ARRAY_TYPE = new Declaration(DeclarationType.ARRAY_TYPE);
     public static final Declaration FUNCTION = new Declaration(DeclarationType.FUNCTION);
@@ -29,6 +30,12 @@ public class Declaration {
         return declaration;
     }
 
+    public static Declaration arrayConstantOfType(SymbolTableRecord record) {
+        Declaration declaration = new Declaration(DeclarationType.ARRAY_CONSTANT);
+        declaration.record = record;
+        return declaration;
+    }
+
     public DeclarationType getType() {
         return type;
     }
@@ -38,7 +45,7 @@ public class Declaration {
     }
 
     public boolean isPrimitive() {
-        return type == DeclarationType.INT || type == DeclarationType.FLOAT || type == DeclarationType.BOOL;
+        return type == DeclarationType.INT || type == DeclarationType.FLOAT || type == DeclarationType.BOOL || type == DeclarationType.VOID;
     }
 
     @Override

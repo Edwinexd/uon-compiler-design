@@ -8,12 +8,14 @@ public enum DeclarationType {
     STRUCT,
     ARRAY_TYPE, // Since this also confuses me, this is the equivilance of typeid in the grammar ...
     ARRAY,
+    ARRAY_CONSTANT,
     INT,
     FLOAT,
-    BOOL;
+    BOOL,
+    VOID;
 
     public boolean requiresSymbolTableRecord() {
-        return this == ARRAY || this == STRUCT;
+        return this == ARRAY || this == ARRAY_CONSTANT || this == STRUCT;
     }
 
 
