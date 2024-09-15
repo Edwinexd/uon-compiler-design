@@ -98,7 +98,9 @@
 // <exponent> ::= <var> | <intlit> | <reallit> | <fncall> | true | false
 // <exponent> ::= ( <bool> )
 
-// <fncall> ::= <id> ( <elist> ) | <id> ( )
+// <fncall> ::= <id> ( <fncalltail>
+// <fncalltail> ::= <elist> ) | )
+
 
 // <prlist> ::= <printitem> <prlisttail>
 // <prlisttail> ::= , <prlist> | ε
@@ -164,7 +166,7 @@ public class Parser
         if (tokenList.peek().getType() == TokenType.TFUNC)
         {
             SyntaxTreeNode funcs = funcs();
-            rootNode.setFirstChild(funcs);
+            rootNode.setSecondChild(funcs);
             if (unrecoverable) { return null; }
         }
         if (tokenList.peek().getType() != TokenType.TMAIN)
@@ -175,10 +177,10 @@ public class Parser
             if (unrecoverable) { return new SyntaxTreeNode(TreeNodeType.NUNDEF); }
             //throw new RuntimeException("No main function found :(");
         }
-
+        currentSymbolTable = record.getScope();
         SyntaxTreeNode mainBody = mainbody();
-        rootNode.setFirstChild(mainBody);
-        if (unrecoverable) { return null; }
+        currentSymbolTable = currentSymbolTable.getParent();
+        rootNode.setThirdChild(mainBody);
 
         return rootNode;
     }
@@ -893,7 +895,6 @@ public class Parser
 
     //#region <mainbody> ::= main <slist> begin <stats> end CD24 <id>
     private SyntaxTreeNode mainbody() {
-
         if (tokenList.peek().getType() != TokenType.TMAIN) {
             // Critical error
             tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ","main", tokenList.peek().getLine(), tokenList.peek().getColumn()));
@@ -903,8 +904,7 @@ public class Parser
 
         tokenList.pop(); // main
 
-        slist();
-        if (unrecoverable) { return null; }
+        SyntaxTreeNode slistNode = slist();
 
         if (tokenList.peek().getType() != TokenType.TBEGN) {
             // Critical error
@@ -915,8 +915,7 @@ public class Parser
 
         tokenList.pop(); // begin
 
-        stats();
-        if (unrecoverable) { return null; }
+        SyntaxTreeNode statsNode = stats();
 
         if (tokenList.peek().getType() != TokenType.TTEND) {
             // Critical error
@@ -945,6 +944,14 @@ public class Parser
             if (unrecoverable) { return new SyntaxTreeNode(TreeNodeType.NUNDEF); }
         }
 
+        SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
+        if (record.getDeclaration().isEmpty() || !record.getDeclaration().get().equals(Declaration.PROGRAM)) {
+            // TODO End of main id should be the same as the program id
+        }
+        SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NMAIN, idToken, record);
+        node.setFirstChild(slistNode);
+        node.setSecondChild(statsNode);
+        return node;
     }
     //endregion
     
@@ -1564,89 +1571,89 @@ public class Parser
         }
     }
     // <asgnstat> ::= <var> <asgnop> <bool>
-    private void asgnstat() {
-        var();
-        if (unrecoverable) { return null; }
-        asgnop();
-        if (unrecoverable) { return null; }
-        boolParse();
-        if (unrecoverable) { return null; }
+    private SyntaxTreeNode asgnstat() {
+        SyntaxTreeNode varNode = var();
+        TreeNodeType asgnopNode;
+        try {
+            asgnopNode = asgnop();
+        } catch (RuntimeException e) {
+            return new SyntaxTreeNode(TreeNodeType.NUNDEF);
+        }
+        SyntaxTreeNode boolNode = boolParse();
+
+        SyntaxTreeNode node = new SyntaxTreeNode(asgnopNode);
+
+        node.setFirstChild(varNode);
+        node.setThirdChild(boolNode);
+
+        return node;
     }
     // <asgnop> :: == | += | -= | *= | /=
-    private void asgnop() {
-        if (tokenList.peek().getType() == TokenType.TEQEQ) {
-            tokenList.pop();
-            // in tree
-            return;
-        } else if (tokenList.peek().getType() == TokenType.TPLEQ) {
-            tokenList.pop();
-            // in tree
-            return;
-        } else if (tokenList.peek().getType() == TokenType.TMNEQ) {
-            tokenList.pop();
-            // in tree
-            return;
-        }else if (tokenList.peek().getType() == TokenType.TSTEQ) {
-            tokenList.pop();
-            // in tree
-            return;
-        } else if (tokenList.peek().getType() == TokenType.TDVEQ) {
-            tokenList.pop();
-            // in tree
-            return;
+    private TreeNodeType asgnop() {
+        while (true) {
+            if (tokenList.peek().getType() == TokenType.TEQUL) {
+                tokenList.pop();
+                return TreeNodeType.NASGN;
+            } else if (tokenList.peek().getType() == TokenType.TPLEQ) {
+                tokenList.pop();
+                return TreeNodeType.NPLEQ;
+            } else if (tokenList.peek().getType() == TokenType.TMNEQ) {
+                tokenList.pop();
+                return TreeNodeType.NMNEQ;
+            } else if (tokenList.peek().getType() == TokenType.TSTEQ) {
+                tokenList.pop();
+                return TreeNodeType.NSTEA;
+            } else if (tokenList.peek().getType() == TokenType.TDVEQ) {
+                tokenList.pop();
+                return TreeNodeType.NDVEQ;
+            }
+            // Critical error
+            tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ","Assignment Operator", tokenList.peek().getLine(), tokenList.peek().getColumn()));
+            unrecoverable = popTillTokenType(new LinkedList<TokenType>(Arrays.asList(TokenType.TEQUL, TokenType.TPLEQ, TokenType.TMNEQ, TokenType.TSTEQ, TokenType.TDVEQ)));
+            if (unrecoverable) { throw new RuntimeException("Unrecoverable error"); }
         }
-        // Critical error
-        tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ","Assignment Operator", tokenList.peek().getLine(), tokenList.peek().getColumn()));
-        unrecoverable = popTillTokenType(new LinkedList<TokenType>(Arrays.asList(TokenType.TEQEQ, TokenType.TPLEQ, TokenType.TMNEQ, TokenType.TSTEQ, TokenType.TDVEQ)));
-        if (unrecoverable) { return new SyntaxTreeNode(TreeNodeType.NUNDEF); }
-        asgnop(); // recall itself
-        if (unrecoverable) { return null; }
     }
 
     // <iostat> ::= input <vlist> | print <prlist> | printline <prlist>
-    private void iostat() {
-        if (tokenList.peek().getType() == TokenType.TINPT) {
-
-            tokenList.pop(); // input
-
-            vlist();
-            if (unrecoverable) { return null; }
-
-        } else if (tokenList.peek().getType() == TokenType.TPRNT) {
-
-            tokenList.pop(); // print
-
-            prlist();
-            if (unrecoverable) { return null; }
-
-        } else if (tokenList.peek().getType() == TokenType.TPRLN) {
-
-            tokenList.pop(); // printline
-
-            prlist();
-            if (unrecoverable) { return null; }
-
-        } else {
+    private SyntaxTreeNode iostat() {
+        Token peekedToken = tokenList.peek();
+        if (!(peekedToken.getType() == TokenType.TINPT || 
+            peekedToken.getType() == TokenType.TPRNT || 
+            peekedToken.getType() == TokenType.TPRLN)) {
             // Critical error
             tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ","Input, Print, or Printline", tokenList.peek().getLine(), tokenList.peek().getColumn()));
             unrecoverable = popTillTokenType(new LinkedList<TokenType>(Arrays.asList(TokenType.TINPT, TokenType.TPRNT, TokenType.TPRLN)));
             if (unrecoverable) { return new SyntaxTreeNode(TreeNodeType.NUNDEF); }
-            iostat(); // recall itself
-            if (unrecoverable) { return null; }
         }
+        tokenList.pop(); // input, print, or printline
+        if (peekedToken.getType() == TokenType.TINPT) {
+            SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NINPUT);
+            SyntaxTreeNode vlistNode = vlist();
+            node.setFirstChild(vlistNode);
+            return node;
+        }
+
+        SyntaxTreeNode node = new SyntaxTreeNode(peekedToken.getType() == TokenType.TPRNT ? TreeNodeType.NPRINT : TreeNodeType.NPRLN);
+
+        SyntaxTreeNode prlistNode = prlist();
+
+        node.setFirstChild(prlistNode);
+
+        return node;
     }
 
     // <callstat> ::= <id> ( <callstattail>
-    private void callstat() {
-
-        Token idToken = tokenList.pop();
-
-        if (idToken.getType() != TokenType.TIDEN) {
+    private SyntaxTreeNode callstat() {
+        if (tokenList.peek().getType() != TokenType.TIDEN) {
             // Critical error
             tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ","Identifier", tokenList.peek().getLine(), tokenList.peek().getColumn()));
             unrecoverable = popTillTokenType(TokenType.TIDEN);
             if (unrecoverable) { return new SyntaxTreeNode(TreeNodeType.NUNDEF); }
         }
+
+        Token idToken = tokenList.pop();
+
+        SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
 
         if (tokenList.peek().getType() != TokenType.TLPAR) {
             // Critical error
@@ -1657,97 +1664,100 @@ public class Parser
 
         tokenList.pop(); // (
 
-        callstattail();
-        if (unrecoverable) { return null; }
+        SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NCALL, idToken, record);
+        
+        SyntaxTreeNode elistNode = callstattail();
+        if (elistNode != null) {
+            node.setFirstChild(elistNode);
+        }
+
+        return node;
     }
 
     // <callstattail> ::= <elist> ) | )
-    private void callstattail() {
+    private SyntaxTreeNode callstattail() {
 
         if (tokenList.peek().getType() == TokenType.TRPAR) {
 
             tokenList.pop(); // )
-
-        } else {
-
-            elist();
-            if (unrecoverable) { return null; }
-
-            if (tokenList.peek().getType() != TokenType.TRPAR) {
-                // Critical error
-                tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ",")", tokenList.peek().getLine(), tokenList.peek().getColumn()));
-                unrecoverable = popTillTokenType(TokenType.TRPAR);
-                if (unrecoverable) { return new SyntaxTreeNode(TreeNodeType.NUNDEF); }
-            }
-
-            tokenList.pop(); // )
-
+            return null;
         }
+
+        SyntaxTreeNode elistNode = elist();
+
+        if (tokenList.peek().getType() != TokenType.TRPAR) {
+            // Critical error
+            tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ",")", tokenList.peek().getLine(), tokenList.peek().getColumn()));
+            unrecoverable = popTillTokenType(TokenType.TRPAR);
+            if (unrecoverable) { return new SyntaxTreeNode(TreeNodeType.NUNDEF); }
+        }
+
+        tokenList.pop(); // )
+
+        return elistNode;
     }
 
-    // <returnstat> ::= return void | return <expr>
-    private void returnstat() {
+    // Note: This is easier to implement as a single function for both production rules
+    // <returnstat> ::= return <returnstattail>
+    // <returnstattail> ::= void | <expr>
+    private SyntaxTreeNode returnstat() {
         if (tokenList.peek().getType() != TokenType.TRETN) {
-            // error
+            // Critical error
             tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ","return", tokenList.peek().getLine(), tokenList.peek().getColumn()));
             unrecoverable = popTillTokenType(TokenType.TRETN);
             if (unrecoverable) { return new SyntaxTreeNode(TreeNodeType.NUNDEF); }
-        } 
-
+        }
         tokenList.pop(); // return
 
+        SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NRETN);
         if (tokenList.peek().getType() == TokenType.TVOID) {
-
             tokenList.pop(); // void
-
         } else {
-
-            expr();
-            if (unrecoverable) { return null; }
-
+            node.setFirstChild(expr());
         }
-        
+        return node;
     }
     // <vlist> ::= <var> <vlisttail>
-    private void vlist() {
-        var();
-        if (unrecoverable) { return null; }
-        vlisttail();
-        if (unrecoverable) { return null; }
+    private SyntaxTreeNode vlist() {
+        SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NVLIST);
+        node.setFirstChild(var());
+        SyntaxTreeNode tail = vlisttail();
+        if (tail != null) {
+            node.setThirdChild(tail);
+        }
+        return node;
     }
     // <vlisttail> ::= , <vlisttail> | ε
-    private void vlisttail() {
-        if (tokenList.peek().getType() == TokenType.TCOMA) {
-
-            tokenList.pop(); // ,
-
-            vlisttail();
-            if (unrecoverable) { return null; }
-
-        } else {
-            // Eee
+    private SyntaxTreeNode vlisttail() {
+        if (tokenList.peek().getType() != TokenType.TCOMA) {
+            return null;
         }
+        tokenList.pop(); // ,
+        SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NVLIST);
+        node.setFirstChild(var());
+        SyntaxTreeNode tail = vlisttail();
+        if (tail != null) {
+            node.setThirdChild(tail);
+        }
+        return node;
     }
     // <var> ::= <id><vartail>
-    private void var() {
-        Token idToken = tokenList.pop();
-        if (idToken.getType() != TokenType.TIDEN) {
+    private SyntaxTreeNode var() {
+        if (tokenList.peek().getType() != TokenType.TIDEN) {
             // Critical error
             tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ","Identifier", tokenList.peek().getLine(), tokenList.peek().getColumn()));
             unrecoverable = popTillTokenType(TokenType.TIDEN);
             if (unrecoverable) { return new SyntaxTreeNode(TreeNodeType.NUNDEF); }
         }
-        vartail();
-        if (unrecoverable) { return null; }
+        Token idToken = tokenList.pop();
+        return vartail(idToken);
     }
     // <vartail> ::= [<expr>]<vartailtail> | ε
-    private void vartail() {
+    private SyntaxTreeNode vartail(Token idToken) {
         if (tokenList.peek().getType() == TokenType.TLBRK) {
-
             tokenList.pop(); // [
 
-            expr();
-            if (unrecoverable) { return null; }
+            SyntaxTreeNode exprNode = expr();
 
             if (tokenList.peek().getType() != TokenType.TRBRK) {
                 // Critical error
@@ -1758,31 +1768,44 @@ public class Parser
 
             tokenList.pop(); // ]
 
-            vartailtail();
-            if (unrecoverable) { return null; }
-
-        } else {
-            // Eee
+            return vartailtail(idToken, exprNode);
         }
+        // Epsilon production
+        // TODO: This should use getSymbol - not create as that would be a syntax error!
+        SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
+        return new SyntaxTreeNode(TreeNodeType.NSIMV, idToken, record);
     }
     // <vartailtail> ::= . <id> | ε
-    private void vartailtail() {
+    private SyntaxTreeNode vartailtail(Token idToken, SyntaxTreeNode exprNode) {
         if (tokenList.peek().getType() == TokenType.TDOTT) {
 
             tokenList.pop(); // .
 
-            Token idToken = tokenList.pop();
-
-            if (idToken.getType() != TokenType.TIDEN) {
+            if (tokenList.peek().getType() != TokenType.TIDEN) {
                 // Critical error
                 tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ","Identifier", tokenList.peek().getLine(), tokenList.peek().getColumn()));
                 unrecoverable = popTillTokenType(TokenType.TIDEN);
                 if (unrecoverable) { return new SyntaxTreeNode(TreeNodeType.NUNDEF); }
             }
+            Token endIdToken = tokenList.pop();
 
-        } else {
-            // Eee
+            SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
+            currentSymbolTable = record.getScope();
+            SymbolTableRecord endRecord = currentSymbolTable.getOrCreateToken(endIdToken.getLexeme(), endIdToken);
+            currentSymbolTable = currentSymbolTable.getParent();
+
+            // TODO: Not completely sure what children of this node should be? We technically have two ids?
+            SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NARRV, idToken, record);
+            node.setFirstChild(exprNode);
+            node.setThirdChild(new SyntaxTreeNode(TreeNodeType.NSIMV, endIdToken, endRecord));
+            return node;
         }
+        // Epsilon production
+        // TODO: This should use getSymbol - not create as that would be a syntax error!
+        SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
+        SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NAELT, idToken, record);
+        node.setFirstChild(exprNode);
+        return node;
     }
     // <elist> ::= <bool> <elisttail>
     private void elist() {
@@ -2075,16 +2098,19 @@ public class Parser
     }
 
 
-    // <fncall> ::= <id> ( <elist> ) | <id> ( )
+    // <fncall> ::= <id> ( <fncalltail>
     private void fncall() {
-        Token idToken = tokenList.pop();
-
-        if (idToken.getType() != TokenType.TIDEN) {
+        ïf (tokenList.peek().getType() != TokenType.TIDEN) {
             // Critical error
             tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ","Identifier", tokenList.peek().getLine(), tokenList.peek().getColumn()));
             unrecoverable = popTillTokenType(TokenType.TIDEN);
             if (unrecoverable) { return new SyntaxTreeNode(TreeNodeType.NUNDEF); }
         }
+
+        Token idToken = tokenList.pop();
+
+        Record record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
+
 
         if (tokenList.peek().getType() != TokenType.TLPAR) {
             // Critical error
@@ -2095,12 +2121,25 @@ public class Parser
 
         tokenList.pop(); // (
 
-        if (tokenList.peek().getType() != TokenType.TRPAR) {
+        SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NFCALL, idToken, record);
 
-            elist();
-            if (unrecoverable) { return null; }
-
+        SyntaxTreeNode elistNode = fncalltail();
+        if (elistNode != null) {
+            node.setFirstChild(elistNode);
         }
+
+        return node;
+
+    }
+
+    // <fncalltail> ::= <elist> ) | )
+    private SyntaxTreeNode fncalltail() {
+        if (tokenList.peek().getType() == TokenType.TRPAR) {
+            tokenList.pop(); // )
+            return null;
+        }
+
+        SyntaxTreeNode elistNode = elist();
 
         if (tokenList.peek().getType() != TokenType.TRPAR) {
             // Critical error
@@ -2110,44 +2149,44 @@ public class Parser
         }
 
         tokenList.pop(); // )
+
+        return elistNode;
     }
+    
 
     // <prlist> ::= <printitem> <prlisttail>
-    private void prlist() {
-        printitem();
-        if (unrecoverable) { return null; }
-        prlisttail();
-        if (unrecoverable) { return null; }
+    private SyntaxTreeNode prlist() {
+        SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NPRLST);
+        node.setFirstChild(printitem());
+        SyntaxTreeNode tail = prlisttail();
+        if (tail != null) {
+            node.setThirdChild(tail);
+        }
+        return node;
     }
     
     // <prlisttail> ::= , <prlist> | ε
-    private void prlisttail() {
-        if (tokenList.peek().getType() == TokenType.TCOMA) {
-
-            tokenList.pop(); // ,
-
-            prlist();
-            if (unrecoverable) { return null; }
-
-        } else {
-            // Eee
+    private SyntaxTreeNode prlisttail() {
+        if (tokenList.peek().getType() != TokenType.TCOMA) {
+            return null;
         }
+
+        tokenList.pop(); // ,
+        
+        // TODO: This might be increadibly incorrect!
+        return prlist();
+
     }
     
     // <printitem> ::= <expr> | <string>
-    private void printitem() {
+    private SyntaxTreeNode printitem() {
         if (tokenList.peek().getType() == TokenType.TSTRG) {
-
-            // i think tree?
-
-            tokenList.pop(); // string
-
-        } else {
-
-            expr();
-            if (unrecoverable) { return null; }
-
+            Token token = tokenList.pop();
+            SymbolTableRecord record = currentSymbolTable.getOrCreateToken(token.getLexeme(), token);
+            // TODO: Setting declaration to string might be needed!;
+            return new SyntaxTreeNode(TreeNodeType.NSTRG, token, record);
         }
+        return expr();
     }
 
     private boolean popTillTokenType(TokenType type) {
