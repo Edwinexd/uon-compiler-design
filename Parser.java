@@ -1031,53 +1031,50 @@ public class Parser
 
 
     // <stats> ::= <stat>; <statstail> | <strstat> <statstail>
-    private void stats() {
-        if (tokenList.peek().getType() == TokenType.TTFOR || 
-            tokenList.peek().getType() == TokenType.TIFTH ||
-            tokenList.peek().getType() == TokenType.TSWTH ||
-            tokenList.peek().getType() == TokenType.TTTDO) {
-
-            strstat();
-            if (unrecoverable) { return null; }
-
-            statstail();
-            if (unrecoverable) { return null; }
-
-        } else {
-
-            stat();
-
-            if (tokenList.peek().getType() != TokenType.TSEMI) {
-                // Critical error
-                tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ",";", tokenList.peek().getLine(), tokenList.peek().getColumn()));
-                unrecoverable = popTillTokenType(TokenType.TSEMI);
-                if (unrecoverable) { return new SyntaxTreeNode(TreeNodeType.NUNDEF); }
-            }
-
-            tokenList.pop(); // ;
-
-            statstail();
-            if (unrecoverable) { return null; }
-        }
+    private SyntaxTreeNode stats() {
+        return statstail(true);
     }
 
 
     // <statstail> ::= <stat>; <statstail> | <strstat> <statstail> | ε
-    private void statstail() {
-        if (tokenList.peek().getType() == TokenType.TTFOR || 
-            tokenList.peek().getType() == TokenType.TIFTH ||
-            tokenList.peek().getType() == TokenType.TSWTH ||
-            tokenList.peek().getType() == TokenType.TTTDO) {
+    private SyntaxTreeNode statstail(boolean forbidEpsilon) {
+        Token peekedToken = tokenList.peek();
+        TokenType peekedType = peekedToken.getType();
+        // strstat:
+        boolean strstatOrstat = (
+            peekedType == TokenType.TTFOR ||
+            peekedType == TokenType.TIFTH ||
+            peekedType == TokenType.TSWTH ||
+            peekedType == TokenType.TTTDO ||
+            // and stat:
+            peekedType == TokenType.TREPT ||
+            peekedType == TokenType.TIDEN ||
+            peekedType == TokenType.TINPT ||
+            peekedType == TokenType.TPRNT ||
+            peekedType == TokenType.TPRLN ||
+            peekedType == TokenType.TRETN
+        );
+        if (strstatOrstat && forbidEpsilon) {
+            tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ","Statement", tokenList.peek().getLine(), tokenList.peek().getColumn()));
+            unrecoverable = popTillTokenType(new LinkedList<TokenType>(Arrays.asList(TokenType.TTFOR, TokenType.TIFTH, TokenType.TSWTH, TokenType.TTTDO, TokenType.TREPT, TokenType.TIDEN, TokenType.TINPT, TokenType.TPRNT, TokenType.TPRLN, TokenType.TRETN)));
+            if (unrecoverable) { return new SyntaxTreeNode(TreeNodeType.NUNDEF); }
+        }
+        
+        if (!strstatOrstat && !forbidEpsilon) {
+            return null;
+        }
 
-            strstat();
-            if (unrecoverable) { return null; }
-
-            statstail();
-            if (unrecoverable) { return null; }
-
-        } else if (tokenList.peek().getType() != TokenType.TSEMI) {
-
-            stat();
+        
+        SyntaxTreeNode firstNode;
+        // stat
+        if (peekedType == TokenType.TREPT || 
+            peekedType == TokenType.TIDEN || 
+            peekedType == TokenType.TINPT || 
+            peekedType == TokenType.TPRNT || 
+            peekedType == TokenType.TPRLN || 
+            peekedType == TokenType.TRETN)
+        {
+            firstNode = stat();
 
             if (tokenList.peek().getType() != TokenType.TSEMI) {
                 // Critical error
@@ -1087,11 +1084,23 @@ public class Parser
             }
 
             tokenList.pop(); // ;
-
-            statstail();
-            if (unrecoverable) { return null; }
+        } else {
+            firstNode = strstat();
         }
-        // eeee eee eee ee e
+        // strstat
+        // (ttfor | tifth | tswth | tttdo)
+
+        SyntaxTreeNode tail = statstail(false);
+
+        SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NSTATS);
+
+        node.setFirstChild(firstNode);
+
+        if (tail != null) {
+            node.setThirdChild(tail);
+        }
+
+        return node;
     }
 
 
@@ -1578,7 +1587,7 @@ public class Parser
         node.setSecondChild(statsNode);
         return node;
     }
-    
+
     // <asgnstat> ::= <var> <asgnop> <bool>
     private SyntaxTreeNode asgnstat() {
         SyntaxTreeNode varNode = var();
