@@ -1455,10 +1455,13 @@ public class Parser
     }
 
     // <switchstat> ::= switch ( <expr> ) begin <caselist> end
-    private void switchstat() {
+    private SyntaxTreeNode switchstat() {
         if (tokenList.peek().getType() != TokenType.TSWTH) {
-            //er Raw
+            tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ","switch", tokenList.peek().getLine(), tokenList.peek().getColumn()));
+            unrecoverable = popTillTokenType(TokenType.TSWTH);
+            if (unrecoverable) { return new SyntaxTreeNode(TreeNodeType.NUNDEF); }
         }
+
         tokenList.pop(); // switch
             
         if (tokenList.peek().getType() != TokenType.TLPAR) {
@@ -1470,8 +1473,7 @@ public class Parser
 
         tokenList.pop(); // (
 
-        expr();
-        if (unrecoverable) { return null; }
+        SyntaxTreeNode exprNode = expr();
 
         if (tokenList.peek().getType() != TokenType.TRPAR) {
             // Critical error
@@ -1491,8 +1493,7 @@ public class Parser
 
         tokenList.pop(); // begin
 
-        caselist();
-        if (unrecoverable) { return null; }
+        SyntaxTreeNode caselistNode = caselist();
 
         if (tokenList.peek().getType() != TokenType.TTEND) {
             // Critical error
@@ -1504,13 +1505,21 @@ public class Parser
         tokenList.pop(); // end
     }
     // <caselist> ::= case <expr> : <stats> break ; <caselist> | default : <stats>
-    private void caselist() {
+    private SyntaxTreeNode caselist() {
+        Token peekedToken = tokenList.peek();
+        TokenType peekedType = peekedToken.getType();
+        if (peekedType != TokenType.TCASE && peekedType != TokenType.TDFLT) {
+            // Critical error
+            tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ","case or default", tokenList.peek().getLine(), tokenList.peek().getColumn()));
+            unrecoverable = popTillTokenType(new LinkedList<TokenType>(Arrays.asList(TokenType.TCASE, TokenType.TDFLT)));
+            if (unrecoverable) { return new SyntaxTreeNode(TreeNodeType.NUNDEF); }
+        }
+
         if (tokenList.peek().getType() == TokenType.TCASE) {
 
             tokenList.pop(); // case
 
-            expr();
-            if (unrecoverable) { return null; }
+            SyntaxTreeNode exprNode = expr();
 
             if (tokenList.peek().getType() != TokenType.TCOLN) {
                 // Critical error
@@ -1521,8 +1530,7 @@ public class Parser
             
             tokenList.pop(); // :
 
-            stats();
-            if (unrecoverable) { return null; }
+            SyntaxTreeNode statsNode = stats();
 
             if (tokenList.peek().getType() != TokenType.TBREK) {
                 // Critical error
@@ -1542,34 +1550,35 @@ public class Parser
 
             tokenList.pop(); // ;
 
-            caselist();
-            if (unrecoverable) { return null; }
+            SyntaxTreeNode caselistNode = caselist();
 
-        } else if (tokenList.peek().getType() == TokenType.TDFLT) {
+            SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NCASLT);
+            node.setFirstChild(exprNode);
+            node.setSecondChild(statsNode);
+            node.setThirdChild(caselistNode);
+            return node;
 
-            tokenList.pop(); // default
-
-            if (tokenList.peek().getType() != TokenType.TCOLN) {
-                // Critical error
-                tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ",":", tokenList.peek().getLine(), tokenList.peek().getColumn()));
-                unrecoverable = popTillTokenType(TokenType.TCOLN);
-                if (unrecoverable) { return new SyntaxTreeNode(TreeNodeType.NUNDEF); }
-            }
-
-            tokenList.pop(); // :
-
-            stats();
-            if (unrecoverable) { return null; }
-
-        } else {
-            // error
-            tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ","case or default", tokenList.peek().getLine(), tokenList.peek().getColumn()));
-            unrecoverable = popTillTokenType(new LinkedList<TokenType>(Arrays.asList(TokenType.TCASE, TokenType.TDFLT)));
-            if (unrecoverable) { return new SyntaxTreeNode(TreeNodeType.NUNDEF); }
-            caselist(); // recall itself
-            if (unrecoverable) { return null; }
         }
+        // default
+        tokenList.pop(); // default
+
+        if (tokenList.peek().getType() != TokenType.TCOLN) {
+            // Critical error
+            tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ",":", tokenList.peek().getLine(), tokenList.peek().getColumn()));
+            unrecoverable = popTillTokenType(TokenType.TCOLN);
+            if (unrecoverable) { return new SyntaxTreeNode(TreeNodeType.NUNDEF); }
+        }
+
+        tokenList.pop(); // :
+
+        SyntaxTreeNode statsNode = stats();
+
+        // TODO: Not sure if this is the intended structure for default case
+        SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NCASLT);
+        node.setSecondChild(statsNode);
+        return node;
     }
+    
     // <asgnstat> ::= <var> <asgnop> <bool>
     private SyntaxTreeNode asgnstat() {
         SyntaxTreeNode varNode = var();
