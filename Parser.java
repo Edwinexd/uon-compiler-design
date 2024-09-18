@@ -1380,8 +1380,13 @@ public class Parser
     }
 
     // <ifstat> ::= if ( <bool> ) <stats> <ifstattail> end
-    private void ifstat() {
-
+    private SyntaxTreeNode ifstat() {
+        if (tokenList.peek().getType() != TokenType.TIFTH) {
+            tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ","if", tokenList.peek().getLine(), tokenList.peek().getColumn()));
+            unrecoverable = popTillTokenType(TokenType.TIFTH);
+            // Critical error
+            if (unrecoverable) { return new SyntaxTreeNode(TreeNodeType.NUNDEF); }
+        }
         tokenList.pop(); // if
 
         if (tokenList.peek().getType() != TokenType.TLPAR) {
@@ -1393,8 +1398,7 @@ public class Parser
 
         tokenList.pop(); // (
 
-        boolParse();
-        if (unrecoverable) { return null; }
+        SyntaxTreeNode boolNode = boolParse();
 
         if (tokenList.peek().getType() != TokenType.TRPAR) {
             tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ",")", tokenList.peek().getLine(), tokenList.peek().getColumn()));
@@ -1405,11 +1409,10 @@ public class Parser
 
         tokenList.pop(); // )
 
-        stats();
-        if (unrecoverable) { return null; }
+        SyntaxTreeNode statsNode = stats();
 
-        ifstattail();
-        if (unrecoverable) { return null; }
+        SyntaxTreeNode tail = ifstattail();
+        // tail can either be null, stats (else) or an ifstat (elif)
 
         if (tokenList.peek().getType() != TokenType.TTEND) {
             tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ","end", tokenList.peek().getLine(), tokenList.peek().getColumn()));
@@ -1420,47 +1423,54 @@ public class Parser
 
         tokenList.pop(); // end
 
-    }
-    // <ifstattail> ::= else <stats> | elif (<bool>) <stats> | ε
-    private void ifstattail() {
-        tokenList.pop();
+        TreeNodeType resultNodeType = tail == null ? TreeNodeType.NIFTH : TreeNodeType.NIFTE;
 
+        SyntaxTreeNode node = new SyntaxTreeNode(resultNodeType);
+        node.setFirstChild(boolNode);
+        node.setSecondChild(tail);
+        node.setThirdChild(statsNode);
+
+        return node;
+    }
+
+    // <ifstattail> ::= else <stats> | elif (<bool>) <stats> | ε
+    private SyntaxTreeNode ifstattail() {
         if (tokenList.peek().getType() == TokenType.TELSE) {
             
             tokenList.pop(); // else
 
-            stats();
-            if (unrecoverable) { return null; }
+            return stats();
+        }
+        if (tokenList.peek().getType() == TokenType.TELIF) {
+            tokenList.pop(); // elif
 
-        } else if (tokenList.peek().getType() == TokenType.TELIF) {
-            
             if (tokenList.peek().getType() != TokenType.TLPAR) {
                 tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ","(", tokenList.peek().getLine(), tokenList.peek().getColumn()));
                 unrecoverable = popTillTokenType(TokenType.TLPAR);
-                // Critical error
-            if (unrecoverable) { return new SyntaxTreeNode(TreeNodeType.NUNDEF); }
+                if (unrecoverable) { return new SyntaxTreeNode(TreeNodeType.NUNDEF); }
             }
 
             tokenList.pop(); // (
 
-            boolParse();
-            if (unrecoverable) { return null; }
+            SyntaxTreeNode boolNode = boolParse();
 
             if (tokenList.peek().getType() != TokenType.TRPAR) {
                 tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ",")", tokenList.peek().getLine(), tokenList.peek().getColumn()));
                 unrecoverable = popTillTokenType(TokenType.TRPAR);
-                // Critical error
-            if (unrecoverable) { return new SyntaxTreeNode(TreeNodeType.NUNDEF); }
+                if (unrecoverable) { return new SyntaxTreeNode(TreeNodeType.NUNDEF); }
             }
 
             tokenList.pop(); // )
 
-            stats();
-            if (unrecoverable) { return null; }
+            SyntaxTreeNode statsNode = stats();
 
-        } else {
-            // eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+            SyntaxTreeNode result = new SyntaxTreeNode(TreeNodeType.NIFTH);
+            result.setFirstChild(boolNode);
+            result.setThirdChild(statsNode);
+
+            return result;
         }
+        // ε 
     }
 
     // <switchstat> ::= switch ( <expr> ) begin <caselist> end
