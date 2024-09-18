@@ -70,4 +70,6 @@ public enum TreeNodeType {
     NSTRG,
     // TODO - What is special?
     SpecialTODO,
+    // Special undefined
+    NUNDEF,
 }
