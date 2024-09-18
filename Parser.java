@@ -1286,13 +1286,8 @@ public class Parser
 
     // <caselist> ::= case <expr> : <stats> break ; <caselist> | default : <stats>
     private SyntaxTreeNode caselist() {
-        Token peekedToken = tokenList.peek();
-        TokenType peekedType = peekedToken.getType();
-        if (peekedType != TokenType.TCASE && peekedType != TokenType.TDFLT) {
-            tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ","case or default", tokenList.peek().getLine(), tokenList.peek().getColumn()));
-            unrecoverable = popTillTokenType(new LinkedList<TokenType>(Arrays.asList(TokenType.TCASE, TokenType.TDFLT)));
-            if (unrecoverable) { return new SyntaxTreeNode(TreeNodeType.NUNDEF); }
-        }
+        safePeek("case or default", TokenType.TCASE, TokenType.TDFLT);
+        if (unrecoverable) { return getErrorNode(); }
 
         if (typeAtPeek(TokenType.TCASE)) {
 
@@ -1362,27 +1357,25 @@ public class Parser
     }
     // <asgnop> :: == | += | -= | *= | /=
     private TreeNodeType asgnop() {
-        while (true) {
-            if (typeAtPeek(TokenType.TEQUL)) {
-                tokenList.pop();
-                return TreeNodeType.NASGN;
-            } else if (typeAtPeek(TokenType.TPLEQ)) {
-                tokenList.pop();
-                return TreeNodeType.NPLEQ;
-            } else if (typeAtPeek(TokenType.TMNEQ)) {
-                tokenList.pop();
-                return TreeNodeType.NMNEQ;
-            } else if (typeAtPeek(TokenType.TSTEQ)) {
-                tokenList.pop();
-                return TreeNodeType.NSTEA;
-            } else if (typeAtPeek(TokenType.TDVEQ)) {
-                tokenList.pop();
-                return TreeNodeType.NDVEQ;
-            }
-            tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ","Assignment Operator", tokenList.peek().getLine(), tokenList.peek().getColumn()));
-            unrecoverable = popTillTokenType(new LinkedList<TokenType>(Arrays.asList(TokenType.TEQUL, TokenType.TPLEQ, TokenType.TMNEQ, TokenType.TSTEQ, TokenType.TDVEQ)));
-            if (unrecoverable) { throw new RuntimeException("Unrecoverable error"); }
+        safePeek("Assignment Operator", TokenType.TEQUL, TokenType.TPLEQ, TokenType.TMNEQ, TokenType.TSTEQ, TokenType.TDVEQ);
+        if (unrecoverable) { throw new RuntimeException("Critical error, expected an assignment operator"); }
+
+        TokenType tokenType = tokenList.pop().getType();
+
+        if (tokenType == TokenType.TEQUL) {
+            return TreeNodeType.NASGN;
         }
+        if (tokenType == TokenType.TPLEQ) {
+            return TreeNodeType.NPLEQ;
+        }
+        if (tokenType == TokenType.TMNEQ) {
+            return TreeNodeType.NMNEQ;
+        }
+        if (tokenType == TokenType.TSTEQ) {
+            return TreeNodeType.NSTEA;
+        }
+        // if (tokenType == TokenType.TDVEQ)
+        return TreeNodeType.NDVEQ;
     }
 
     // <iostat> ::= input <vlist> | print <prlist> | printline <prlist>
@@ -1711,6 +1704,8 @@ public class Parser
 
     // <logop> ::= and | or | xor
     private SyntaxTreeNode logop() {
+        safePeek("Logical Operator", TokenType.TTAND, TokenType.TTTOR, TokenType.TTXOR);
+        if (unrecoverable) { return getErrorNode(); }
         if (typeAtPeek(TokenType.TTAND)) {
 
             // and
@@ -1738,29 +1733,20 @@ public class Parser
             );
             return orNode;
 
-        } else if (typeAtPeek(TokenType.TTXOR)) {
+        } 
+        // else if (typeAtPeek(TokenType.TTXOR))
+        SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
+            tokenList.peek().getLexeme(), 
+            tokenList.peek()
+        );
 
-            SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
-                tokenList.peek().getLexeme(), 
-                tokenList.peek()
-            );
-
-            // xor
-            SyntaxTreeNode xorNode = new SyntaxTreeNode(
-                TreeNodeType.NXOR, 
-                tokenList.pop(), 
-                record
-            );
-            return xorNode;
-
-        }
-
-        tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ","and, or, or xor", tokenList.peek().getLine(), tokenList.peek().getColumn()));
-        unrecoverable = popTillTokenType(new LinkedList<TokenType>(Arrays.asList(TokenType.TTAND, TokenType.TTTOR, TokenType.TTXOR)));
-        if (unrecoverable) { return new SyntaxTreeNode(TreeNodeType.NUNDEF); }
-        SyntaxTreeNode logopNode = logop(); // recall itself
-        return logopNode;
-        
+        // xor
+        SyntaxTreeNode xorNode = new SyntaxTreeNode(
+            TreeNodeType.NXOR, 
+            tokenList.pop(), 
+            record
+        );
+        return xorNode;
     }
     
     // NEQL <relop> ::= ==
@@ -1772,6 +1758,8 @@ public class Parser
 
     // <relop> ::= == | != | > | <= | < | >=
     private SyntaxTreeNode relop() {
+        safePeek("Relational Operator", TokenType.TEQEQ, TokenType.TNEQL, TokenType.TGRTR, TokenType.TLEQL, TokenType.TLESS, TokenType.TGEQL);
+        if (unrecoverable) { return getErrorNode(); }
         if (typeAtPeek(TokenType.TEQEQ)) {
 
             SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
@@ -1847,27 +1835,20 @@ public class Parser
             );
             return lessThanNode;
 
-        } else if (typeAtPeek(TokenType.TGEQL)) {
-
-            SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
-                tokenList.peek().getLexeme(), 
-                tokenList.peek()
-            );
-
-            // >=
-            SyntaxTreeNode greaterThanEqualNode = new SyntaxTreeNode(
-                TreeNodeType.NGEQ, 
-                tokenList.pop(), 
-                record
-            );
-            return greaterThanEqualNode;
-
+        // } else if (typeAtPeek(TokenType.TGEQL)) {
         }
-        tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ","==, !=, >, <=, <, or >=", tokenList.peek().getLine(), tokenList.peek().getColumn()));
-        unrecoverable = popTillTokenType(new LinkedList<TokenType>(Arrays.asList(TokenType.TEQEQ, TokenType.TNEQL, TokenType.TGRTR, TokenType.TLEQL, TokenType.TLESS, TokenType.TGEQL)));
-        if (unrecoverable) { return new SyntaxTreeNode(TreeNodeType.NUNDEF); }
-        SyntaxTreeNode relopNode = relop();    // recall itself
-        return relopNode;
+        SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
+            tokenList.peek().getLexeme(), 
+            tokenList.peek()
+        );
+
+        // >=
+        SyntaxTreeNode greaterThanEqualNode = new SyntaxTreeNode(
+            TreeNodeType.NGEQ, 
+            tokenList.pop(), 
+            record
+        );
+        return greaterThanEqualNode;
     }
 
 
