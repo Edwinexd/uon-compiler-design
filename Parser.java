@@ -127,10 +127,24 @@ public class Parser
         tokenList = list;
         this.tokenOutput = tokenOutput;
     }
-
+    
     public void initParsing()
     {
         SyntaxTreeNode syntaxTree = programParse();
+
+        preOrderTraversal(syntaxTree);
+    }
+
+    public void preOrderTraversal(SyntaxTreeNode node) {
+        if (node == null) {
+            return;
+        }
+    
+        System.out.println(node);
+    
+        preOrderTraversal(node.getFirstChild().orElse(null));
+        preOrderTraversal(node.getSecondChild().orElse(null));
+        preOrderTraversal(node.getThirdChild().orElse(null)); 
     }
 
     private boolean typeAtPeek(TokenType ... types) {
@@ -998,29 +1012,34 @@ public class Parser
 
         return asgnstatorcallstattail(idToken);
     }
-    // <asgnstatorcallstattail> ::= <vartail> | ( <callstattail>
+    // <asgnstatorcallstattail> ::= <vartail> <asgnstattail> | ( <callstattail>
     private SyntaxTreeNode asgnstatorcallstattail(Token idToken) {
-        safePeek("[ or (", TokenType.TLBRK, TokenType.TLPAR);
-        if (unrecoverable) { return getErrorNode(); }
+        if (typeAtPeek(TokenType.TLPAR)) {
+            tokenList.pop(); // (
+            // TLPAR
+            tokenList.pop(); // (
 
+            // Same implementation as the entire callstat function
+
+            SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
+            SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NCALL, idToken, record);
+
+            SyntaxTreeNode elistNode = callstattail();
+            if (elistNode != null) {
+                node.setFirstChild(elistNode);
+            }
+
+            return node;
+        }
+        // asgnstat branch
+        SyntaxTreeNode varNode;
         if (typeAtPeek(TokenType.TLBRK)) {
-            return vartail(idToken);
+            varNode = vartail(idToken);
+        } else {
+            SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
+            varNode = new SyntaxTreeNode(TreeNodeType.NSIMV, idToken, record);
         }
-
-        // TLPAR
-        tokenList.pop(); // (
-
-        // Same implementation as the entire callstat function
-
-        SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
-        SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NCALL, idToken, record);
-
-        SyntaxTreeNode elistNode = callstattail();
-        if (elistNode != null) {
-            node.setFirstChild(elistNode);
-        }
-    
-        return node;
+        return asgnstattail(varNode);
     }
 
     // <forstat> ::= for ( <asgnlist> ; <bool> ) <stats> end
@@ -1341,9 +1360,13 @@ public class Parser
         return node;
     }
 
-    // <asgnstat> ::= <var> <asgnop> <bool>
+    // <asgnstat> ::= <var> <asgnstattail>
     private SyntaxTreeNode asgnstat() {
         SyntaxTreeNode varNode = var();
+        return asgnstattail(varNode);
+    }
+
+    private SyntaxTreeNode asgnstattail(SyntaxTreeNode varNode) {
         TreeNodeType asgnopNode;
         try {
             asgnopNode = asgnop();
@@ -1359,6 +1382,7 @@ public class Parser
 
         return node;
     }
+
     // <asgnop> :: == | += | -= | *= | /=
     private TreeNodeType asgnop() {
         safePeek("Assignment Operator", TokenType.TEQUL, TokenType.TPLEQ, TokenType.TMNEQ, TokenType.TSTEQ, TokenType.TDVEQ);
