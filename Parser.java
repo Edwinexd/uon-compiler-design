@@ -151,7 +151,12 @@ public class Parser
         return !tokenList.isEmpty() && Arrays.stream(types).anyMatch(t -> t == tokenList.peek().getType());
     }
 
+    private boolean notTypeAtPeek(TokenType ... types) {
+        return !tokenList.isEmpty() && Arrays.stream(types).noneMatch(t -> t == tokenList.peek().getType());
+    } 
+
     private void safePeek(String tokenTypeExplanation, TokenType ... types) {
+        // TOOD: If find keyword or delimiter, stop le pop!
         if (!tokenList.isEmpty() && typeAtPeek(types)) {
             return;
         }
@@ -252,7 +257,7 @@ public class Parser
 
     //#region <initlisttail> ::= , <init> <initslisttail> | ε
     private SyntaxTreeNode initlisttail() {
-        if (!typeAtPeek(TokenType.TCOMA)) {
+        if (notTypeAtPeek(TokenType.TCOMA)) {
             // this is an epsilon production
             return null;
         }
@@ -320,7 +325,7 @@ public class Parser
 
     //#region <typelisttail> ::= <type> <typelisttail> | ε
     private SyntaxTreeNode typelisttail() {
-        if (!typeAtPeek(TokenType.TIDEN)) {
+        if (notTypeAtPeek(TokenType.TIDEN)) {
             // this is an epsilon production
             return null;
         }
@@ -361,7 +366,7 @@ public class Parser
     //#endregion
 
     //#region <type> ::= <fields> end
-    private SyntaxTreeNode typestruct(Token idToken) {
+        private SyntaxTreeNode typestruct(Token idToken) {
         SyntaxTreeNode fieldsNode = fields();
 
         safePeek("end", TokenType.TTEND);
@@ -381,7 +386,7 @@ public class Parser
     //endregion
 
     //#region <type> ::= [ <expr> ] of <structid> end
-    private SyntaxTreeNode typetype(Token idToken) {
+        private SyntaxTreeNode typetype(Token idToken) {
         safePeek("[", TokenType.TLBRK);
         if (unrecoverable) { return getErrorNode(); }
 
@@ -433,7 +438,7 @@ public class Parser
 
     //#region <fieldstail> ::= <sdecl> <fieldstail> | ε
     private SyntaxTreeNode fieldstail() {
-        if (!typeAtPeek(TokenType.TIDEN)) {
+        if (notTypeAtPeek(TokenType.TIDEN)) {
             // this is an epsilon production
             return null;
         }
@@ -498,7 +503,7 @@ public class Parser
 
     //#region <arrdeclstail> ::= , <arrdecl> <arrdeclstail> | ε 
     private SyntaxTreeNode arrdeclstail() {
-        if (!typeAtPeek(TokenType.TCOMA)) {
+        if (notTypeAtPeek(TokenType.TCOMA)) {
             // this is an epsilon production
             return null;
         }
@@ -548,7 +553,7 @@ public class Parser
 
     //#region <funcPrime> ::= <func> <funcPrime> | ε
     private SyntaxTreeNode funcsPrime() {
-        if (!typeAtPeek(TokenType.TFUNC)) {
+        if (notTypeAtPeek(TokenType.TFUNC)) {
             return null;
         }
         SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NFUNCS);
@@ -618,7 +623,7 @@ public class Parser
 
     //#region <plist> ::= <params> | ε
     private SyntaxTreeNode plist() {
-        if (!typeAtPeek(TokenType.TIDEN, TokenType.TCONS)) {
+        if (notTypeAtPeek(TokenType.TIDEN, TokenType.TCONS)) {
             return null;
         }
         return params();
@@ -641,7 +646,7 @@ public class Parser
 
     //#region <paramsPrime> ::= , <param> <paramsPrime> | ε
     private SyntaxTreeNode paramsPrime() {
-        if (!typeAtPeek(TokenType.TCOMA)) {
+        if (notTypeAtPeek(TokenType.TCOMA)) {
             return null;
         }
         tokenList.pop(); // ,
@@ -689,7 +694,7 @@ public class Parser
 
     //#region <parammaybeconst> ::= const | ε
     private boolean parammaybeconst() {
-        if (!typeAtPeek(TokenType.TCONS)) {
+        if (notTypeAtPeek(TokenType.TCONS)) {
             return false;
         }
         tokenList.pop(); // const
@@ -737,7 +742,7 @@ public class Parser
 
     //#region <locals> ::= <dlist> | ε
     private SyntaxTreeNode locals() {
-        if (!typeAtPeek(TokenType.TIDEN)) {
+        if (notTypeAtPeek(TokenType.TIDEN)) {
             return null;
         }
         return dlist();
@@ -758,7 +763,7 @@ public class Parser
 
     //#region <dlistPrime> ::= , <dlist> | ε
     private SyntaxTreeNode dlistPrime() {
-        if (!typeAtPeek(TokenType.TCOMA)) {
+        if (notTypeAtPeek(TokenType.TCOMA)) {
             return null;
         }
         tokenList.pop(); // ,
@@ -861,7 +866,7 @@ public class Parser
 
     //#region <slistPrime> ::= , <sdecl> <slistPrime> | ε
     private SyntaxTreeNode slistPrime() {
-        if (!typeAtPeek(TokenType.TCOMA)) {
+        if (notTypeAtPeek(TokenType.TCOMA)) {
             return null;
         }
 
@@ -931,7 +936,7 @@ public class Parser
 
 
     // <statstail> ::= <stat>; <statstail> | <strstat> <statstail> | ε
-    private SyntaxTreeNode statstail(boolean forbidEpsilon) {
+        private SyntaxTreeNode statstail(boolean forbidEpsilon) {
         boolean strstatOrstat = typeAtPeek(TokenType.TTFOR, TokenType.TIFTH, TokenType.TSWTH, TokenType.TTTDO, TokenType.TREPT, TokenType.TIDEN, TokenType.TINPT, TokenType.TPRNT, TokenType.TPRLN, TokenType.TRETN);
         if (strstatOrstat && forbidEpsilon) {
             safePeek("Statement", TokenType.TTFOR, TokenType.TIFTH, TokenType.TSWTH, TokenType.TTTDO, TokenType.TREPT, TokenType.TIDEN, TokenType.TINPT, TokenType.TPRNT, TokenType.TPRLN, TokenType.TRETN);
@@ -1013,7 +1018,7 @@ public class Parser
         return asgnstatorcallstattail(idToken);
     }
     // <asgnstatorcallstattail> ::= <vartail> <asgnstattail> | ( <callstattail>
-    private SyntaxTreeNode asgnstatorcallstattail(Token idToken) {
+        private SyntaxTreeNode asgnstatorcallstattail(Token idToken) {
         if (typeAtPeek(TokenType.TLPAR)) {
             tokenList.pop(); // (
             // TLPAR
@@ -1158,7 +1163,7 @@ public class Parser
     }
     // <asgnlist> ::= <alist> | ε
     private SyntaxTreeNode asgnlist() {
-        if (!typeAtPeek(TokenType.TIDEN)) {
+        if (notTypeAtPeek(TokenType.TIDEN)) {
             return null;
         }
         return alist();
@@ -1178,7 +1183,7 @@ public class Parser
 
     // <alisttail> ::= , <asgnstat> <alisttail> | ε
     private SyntaxTreeNode alisttail() {
-        if (!typeAtPeek(TokenType.TCOMA)) {
+        if (notTypeAtPeek(TokenType.TCOMA)) {
             return null;
         }
         tokenList.pop(); // ,
@@ -1366,7 +1371,7 @@ public class Parser
         return asgnstattail(varNode);
     }
 
-    private SyntaxTreeNode asgnstattail(SyntaxTreeNode varNode) {
+        private SyntaxTreeNode asgnstattail(SyntaxTreeNode varNode) {
         TreeNodeType asgnopNode;
         try {
             asgnopNode = asgnop();
@@ -1502,7 +1507,7 @@ public class Parser
     }
     // <vlisttail> ::= , <vlisttail> | ε
     private SyntaxTreeNode vlisttail() {
-        if (!typeAtPeek(TokenType.TCOMA)) {
+        if (notTypeAtPeek(TokenType.TCOMA)) {
             return null;
         }
         tokenList.pop(); // ,
@@ -1523,7 +1528,7 @@ public class Parser
         return vartail(idToken);
     }
     // <vartail> ::= [<expr>]<vartailtail> | ε
-    private SyntaxTreeNode vartail(Token idToken) {
+        private SyntaxTreeNode vartail(Token idToken) {
         if (typeAtPeek(TokenType.TLBRK)) {
             tokenList.pop(); // [
 
@@ -1542,7 +1547,7 @@ public class Parser
         return new SyntaxTreeNode(TreeNodeType.NSIMV, idToken, record);
     }
     // <vartailtail> ::= . <id> | ε
-    private SyntaxTreeNode vartailtail(Token idToken, SyntaxTreeNode exprNode) {
+        private SyntaxTreeNode vartailtail(Token idToken, SyntaxTreeNode exprNode) {
         if (typeAtPeek(TokenType.TDOTT)) {
 
             tokenList.pop(); // .
@@ -1642,7 +1647,7 @@ public class Parser
         }
     }
     // <boolPrime> ::= <logop> <rel> <boolPrime> | ε
-    private SyntaxTreeNode boolPrime(SyntaxTreeNode leftNode) {
+        private SyntaxTreeNode boolPrime(SyntaxTreeNode leftNode) {
         if (typeAtPeek(TokenType.TTAND) || 
             typeAtPeek(TokenType.TTTOR) || 
             typeAtPeek(TokenType.TTXOR)) {
@@ -1705,7 +1710,7 @@ public class Parser
         return reltail(relNode);
     }
     // <reltail> ::= <relop><expr> | ε
-    private SyntaxTreeNode reltail(SyntaxTreeNode leftNode) {
+        private SyntaxTreeNode reltail(SyntaxTreeNode leftNode) {
 
         if (typeAtPeek(TokenType.TEQEQ) || 
             typeAtPeek(TokenType.TNEQL) || 
@@ -2027,7 +2032,6 @@ public class Parser
             return varNode;
 
         } else if (typeAtPeek(TokenType.TILIT)) {
-
             SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
                 tokenList.peek().getLexeme(), 
                 tokenList.peek()
@@ -2166,7 +2170,7 @@ public class Parser
     // <prlisttail> ::= , <prlist> | ε
     private SyntaxTreeNode prlisttail() {
 
-        if (!typeAtPeek(TokenType.TCOMA)) {
+        if (notTypeAtPeek(TokenType.TCOMA)) {
             return null;
         }
 
