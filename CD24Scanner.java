@@ -21,6 +21,10 @@ public class CD24Scanner {
         this.tokenOutput = tokenOutput;
     }
 
+    public List<Token> getTokens() {
+        return tokens;
+    }
+
     public void scan(String path) throws IOException {
         try (Scanner scanner = new Scanner(new File(path))) {
             scanner.useDelimiter("");
