@@ -2085,8 +2085,11 @@ public class Parser
         tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ","and, or, or xor", tokenList.peek().getLine(), tokenList.peek().getColumn()));
         unrecoverable = popTillTokenType(new LinkedList<TokenType>(Arrays.asList(TokenType.TTAND, TokenType.TTTOR, TokenType.TTXOR)));
         if (unrecoverable) { return new SyntaxTreeNode(TreeNodeType.NUNDEF); }
-        logop(); // recall itself
+        SyntaxTreeNode logopNode = logop(); // recall itself
         if (unrecoverable) { return null; }
+
+        return logopNode;
+        
     }
     
     // NEQL <relop> ::= ==
@@ -2193,8 +2196,10 @@ public class Parser
         tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ","==, !=, >, <=, <, or >=", tokenList.peek().getLine(), tokenList.peek().getColumn()));
         unrecoverable = popTillTokenType(new LinkedList<TokenType>(Arrays.asList(TokenType.TEQEQ, TokenType.TNEQL, TokenType.TGRTR, TokenType.TLEQL, TokenType.TLESS, TokenType.TGEQL)));
         if (unrecoverable) { return new SyntaxTreeNode(TreeNodeType.NUNDEF); }
-        relop();    // recall itself
+        SyntaxTreeNode relopNode = relop();    // recall itself
         if (unrecoverable) { return null; }
+
+        return relopNode;
     }
 
 
@@ -2276,6 +2281,8 @@ public class Parser
             node.setFirstChild(term());
             if (unrecoverable) { return null; }
 
+            return node;
+
         } else {
             // epslon
             return null;
@@ -2313,6 +2320,8 @@ public class Parser
 
             node.setSecondChild(factPrime());
             if (unrecoverable) { return null; }
+
+            return node;
 
         } else {
             // epslon
