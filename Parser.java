@@ -941,25 +941,34 @@ public class Parser
     
     //#region <slist> ::= <sdecl> <slistPrime>
     private SyntaxTreeNode slist() {
-        sdecl();
-        if (unrecoverable) { return null; }
-        slistPrime();
-        if (unrecoverable) { return null; }
+        SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NSDLIST);
+        node.setFirstChild(sdecl());
+
+        SyntaxTreeNode tail = slistPrime();
+        if (tail != null) {
+            node.setThirdChild(tail);
+        }
+
+        return node;
     }
     //endregion
 
     //#region <slistPrime> ::= , <sdecl> <slistPrime> | ε
     private SyntaxTreeNode slistPrime() {
-        if (tokenList.peek().getType() == TokenType.TCOMA) {
-            tokenList.pop();
-            sdecl();
-            if (unrecoverable) { return null; }
-            slistPrime();
-            if (unrecoverable) { return null; }
+        if (tokenList.peek().getType() != TokenType.TCOMA) {
+            return null;
+        }
+        tokenList.pop(); // ,
+
+        SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NSDLIST);
+        node.setFirstChild(sdecl());
+
+        SyntaxTreeNode tail = slistPrime();
+        if (tail != null) {
+            node.setThirdChild(tail);
         }
 
-        //// eeeeeee bruv
-
+        return node;
     }
     //endregion
 
