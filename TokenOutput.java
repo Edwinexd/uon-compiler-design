@@ -101,6 +101,14 @@ public class TokenOutput {
         errors.add(error);
     }
 
+    public void flushParserErrors() {
+        for (String error : parserErrors) {
+            printToListingFile("    " + error);
+            printToListingFile(NEWLINE_CHAR);
+        }
+        parserErrors.clear();
+    }
+
     private void printToListingFile(char character) {
         try {
             listingFileWriter.write(character);

@@ -14,12 +14,14 @@ public class B1 {
         tokenOutput.initializeWriters(fileName + ".lst", fileName + "_tokens.txt");
         CD24Scanner scanner = new CD24Scanner(tokenOutput);
         scanner.scan(args[0]);
-        tokenOutput.closeWriters();
-
+        
         Parser parser = new Parser(new LinkedList<>(scanner.getTokens()), tokenOutput);
-
+        
         parser.initParsing();
 
+        tokenOutput.flushParserErrors();
+        
+        tokenOutput.closeWriters();
 
     }
 }

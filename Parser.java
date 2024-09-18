@@ -142,8 +142,12 @@ public class Parser
             return;
         }
 
-        tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ", tokenTypeExplanation, tokenList.peek().getLine(), tokenList.peek().getColumn()));
-        unrecoverable = popTillTokenType(types);
+        if (!tokenList.isEmpty()) {
+            tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ", tokenTypeExplanation, tokenList.peek().getLine(), tokenList.peek().getColumn()));
+            unrecoverable = popTillTokenType(types);
+        } else {
+            unrecoverable = true;
+        }
     }
 
     private SyntaxTreeNode getErrorNode() {
