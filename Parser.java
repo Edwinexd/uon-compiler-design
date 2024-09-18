@@ -1199,7 +1199,7 @@ public class Parser
 
         tokenList.pop(); // ;
 
-        SyntaxTreeNode boolNode = boolParse();
+        SyntaxTreeNode boolNode = bool();
 
         if (tokenList.peek().getType() != TokenType.TRPAR) {
             tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ",")", tokenList.peek().getLine(), tokenList.peek().getColumn()));
@@ -1264,7 +1264,7 @@ public class Parser
 
         tokenList.pop(); // until
 
-        SyntaxTreeNode boolNode = boolParse();
+        SyntaxTreeNode boolNode = bool();
 
         SyntaxTreeNode result = new SyntaxTreeNode(TreeNodeType.NREPT);
         result.setFirstChild(asgnlistNode);
@@ -1272,6 +1272,7 @@ public class Parser
         result.setThirdChild(boolNode);
         return result;
     }
+    
     // <dostat> ::= do <stats> while ( <bool> ) end
     private SyntaxTreeNode dostat() {
         if (tokenList.peek().getType() != TokenType.TTTDO) {
@@ -1302,7 +1303,7 @@ public class Parser
         tokenList.pop(); // (
 
 
-        SyntaxTreeNode boolNode = boolParse();
+        SyntaxTreeNode boolNode = bool();
 
         if (tokenList.peek().getType() != TokenType.TRPAR) {
             tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ",")", tokenList.peek().getLine(), tokenList.peek().getColumn()));
@@ -1382,7 +1383,7 @@ public class Parser
 
         tokenList.pop(); // (
 
-        SyntaxTreeNode boolNode = boolParse();
+        SyntaxTreeNode boolNode = bool();
 
         if (tokenList.peek().getType() != TokenType.TRPAR) {
             tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ",")", tokenList.peek().getLine(), tokenList.peek().getColumn()));
@@ -1436,7 +1437,7 @@ public class Parser
 
             tokenList.pop(); // (
 
-            SyntaxTreeNode boolNode = boolParse();
+            SyntaxTreeNode boolNode = bool();
 
             if (tokenList.peek().getType() != TokenType.TRPAR) {
                 tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ",")", tokenList.peek().getLine(), tokenList.peek().getColumn()));
@@ -1591,7 +1592,7 @@ public class Parser
         } catch (RuntimeException e) {
             return new SyntaxTreeNode(TreeNodeType.NUNDEF);
         }
-        SyntaxTreeNode boolNode = boolParse();
+        SyntaxTreeNode boolNode = bool();
 
         SyntaxTreeNode node = new SyntaxTreeNode(asgnopNode);
 
@@ -1819,60 +1820,170 @@ public class Parser
         node.setFirstChild(exprNode);
         return node;
     }
+
+    // NEXPL <elist> ::= <bool> , <elist>
+    // Special <elist> ::= <bool>
+
     // <elist> ::= <bool> <elisttail>
-    private void elist() {
-        boolParse();
+    private SyntaxTreeNode elist() {
+        SyntaxTreeNode boolNode = bool();
         if (unrecoverable) { return null; }
-        elisttail();
+        SyntaxTreeNode elisttailNode = elisttail();
         if (unrecoverable) { return null; }
+        if (elisttailNode == null) {
+            // Special <elist> ::= <bool>
+            return boolNode;
+        } else {
+            // NEXPL <elist> ::= <bool> , <elist>
+            elisttailNode.setFirstChild(boolNode);
+            return elisttailNode;
+        }
+
     }
+
     // <elisttail> ::= , <elist> | ε
-    private void elisttail() {
+    private SyntaxTreeNode elisttail() {
         if (tokenList.peek().getType() == TokenType.TCOMA) {
 
-            tokenList.pop(); // ,
+            SymbolTableRecord elistRecord = currentSymbolTable.getOrCreateToken(
+                tokenList.peek().getLexeme(), 
+                tokenList.peek()
+            );
 
-            elist();
+            SyntaxTreeNode elistNode = new SyntaxTreeNode(
+                TreeNodeType.NEXPL, 
+                tokenList.pop(), 
+                elistRecord
+            );
+
+            elistNode.setThirdChild(elist());
             if (unrecoverable) { return null; }
+
+            return elistNode;
 
         } else {
             // Eee
+            return null;
         }
     }
-    // <bool> ::= not <bool> | <bool><logop> <rel> | <rel>
-    private void boolParse() {
+
+    
+    // NBOOL <bool> ::= not <bool> | <bool> <logop> <rel>
+    // Special <bool> ::= <rel>
+
+    // <bool> ::= not <bool> | <rel> <boolPrime>
+    private SyntaxTreeNode bool() {
         if (tokenList.peek().getType() == TokenType.TNOTT) {
-
+            
             tokenList.pop(); // not
-
-            boolParse();
+            
+            SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
+                tokenList.peek().getLexeme(), 
+                tokenList.peek()
+            );
+            SyntaxTreeNode boolNode = new SyntaxTreeNode(
+                TreeNodeType.NBOOL, 
+                tokenList.pop(), 
+                record
+            );
+            boolNode.setFirstChild(bool());
             if (unrecoverable) { return null; }
+
+            return boolNode;
 
         } else {
 
-            rel();
+            SyntaxTreeNode relNode = rel();
             if (unrecoverable) { return null; }
 
-            if (tokenList.peek().getType() == TokenType.TTAND || 
-                tokenList.peek().getType() == TokenType.TTTOR || 
-                tokenList.peek().getType() == TokenType.TTXOR) {
-
-                tokenList.pop(); // logop
-
-                rel();
-                if (unrecoverable) { return null; }
-
-            }
-
+            return boolPrime(relNode);
         }
     }
+    // <boolPrime> ::= <logop> <rel> <boolPrime> | ε
+    private SyntaxTreeNode boolPrime(SyntaxTreeNode leftNode) {
+        if (tokenList.peek().getType() == TokenType.TTAND || 
+            tokenList.peek().getType() == TokenType.TTTOR || 
+            tokenList.peek().getType() == TokenType.TTXOR) {
+
+            SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
+                tokenList.peek().getLexeme(), 
+                tokenList.peek()
+            );
+
+            if (tokenList.peek().getType() == TokenType.TTAND) {
+                SyntaxTreeNode andNode = new SyntaxTreeNode(
+                    TreeNodeType.NAND, 
+                    tokenList.pop(), 
+                    record
+                );
+
+                andNode.setFirstChild(leftNode);
+                if (unrecoverable) { return null; }
+                
+                andNode.setThirdChild(logop());
+                if (unrecoverable) { return null; }
+
+                SyntaxTreeNode boolPrimeNode = boolPrime(andNode);
+                if (unrecoverable) { return null; }
+
+                return boolPrimeNode;
+            }
+            else if (tokenList.peek().getType() == TokenType.TTTOR) {
+                SyntaxTreeNode orNode = new SyntaxTreeNode(
+                    TreeNodeType.NOR, 
+                    tokenList.pop(), 
+                    record
+                );
+
+                orNode.setFirstChild(leftNode);
+                if (unrecoverable) { return null; }
+                
+                orNode.setThirdChild(logop());
+                if (unrecoverable) { return null; }
+
+                SyntaxTreeNode boolPrimeNode = boolPrime(orNode);
+                if (unrecoverable) { return null; }
+
+                return boolPrimeNode;
+            }
+            else {
+                SyntaxTreeNode xorNode = new SyntaxTreeNode(
+                    TreeNodeType.NXOR, 
+                    tokenList.pop(), 
+                    record
+                );
+
+                xorNode.setFirstChild(leftNode);
+                if (unrecoverable) { return null; }
+                
+                xorNode.setThirdChild(logop());
+                if (unrecoverable) { return null; }
+
+                SyntaxTreeNode boolPrimeNode = boolPrime(xorNode);
+                if (unrecoverable) { return null; }
+
+                return boolPrimeNode;
+            }
+
+        } else {
+            return leftNode;
+        }
+    }
+
+    
+    // Special <rel> ::= <expr> <relop><expr>
+    // Special <rel> ::= <expr>
+
     // <rel> ::= <expr> <reltail>
-    private void rel() {
-        expr();
-        reltail();
+    private SyntaxTreeNode rel() {
+
+        SyntaxTreeNode relNode = expr();
+        if (unrecoverable) { return null; }
+
+        return reltail(relNode);
     }
     // <reltail> ::= <relop><expr> | ε
-    private void reltail() {
+    private SyntaxTreeNode reltail(SyntaxTreeNode leftNode) {
         if (tokenList.peek().getType() == TokenType.TEQEQ || 
             tokenList.peek().getType() == TokenType.TNEQL || 
             tokenList.peek().getType() == TokenType.TGRTR || 
@@ -1880,33 +1991,71 @@ public class Parser
             tokenList.peek().getType() == TokenType.TLESS || 
             tokenList.peek().getType() == TokenType.TGEQL) {
 
-            relop();
+            SyntaxTreeNode relopNode = relop();
             if (unrecoverable) { return null; }
 
-            expr();
+            relopNode.setFirstChild(leftNode);
+            
+            relopNode.setThirdChild(expr());
             if (unrecoverable) { return null; }
+
+            return relopNode;
 
         } else {
+            return leftNode;
             // Eeeeee ee eee eee eee
         }
     }
+
+    // NAND <logop> ::= and
+    // NOR <logop> ::= or
+    // NXOR <logop> ::= xor
+
     // <logop> ::= and | or | xor
-    private void logop() {
+    private SyntaxTreeNode logop() {
         if (tokenList.peek().getType() == TokenType.TTAND) {
 
-            tokenList.pop(); // and
+            // and
+            SyntaxTreeNode andNode = new SyntaxTreeNode(
+                TreeNodeType.NAND, 
+                tokenList.pop(), 
+                currentSymbolTable.getOrCreateToken(
+                    tokenList.peek().getLexeme(), 
+                    tokenList.peek()
+                )
+            );
+            return andNode;
 
-            return;
         } else if (tokenList.peek().getType() == TokenType.TTTOR) {
 
-            tokenList.pop(); // or
+            SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
+                tokenList.peek().getLexeme(), 
+                tokenList.peek()
+            );
 
-            return;
+            // or
+            SyntaxTreeNode orNode = new SyntaxTreeNode(
+                TreeNodeType.NOR, 
+                tokenList.pop(), 
+                record
+            );
+            return orNode;
+
         } else if (tokenList.peek().getType() == TokenType.TTXOR) {
 
-            tokenList.pop(); // xor
+            SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
+                tokenList.peek().getLexeme(), 
+                tokenList.peek()
+            );
 
-            return;
+            // xor
+            SyntaxTreeNode xorNode = new SyntaxTreeNode(
+                TreeNodeType.NXOR, 
+                tokenList.pop(), 
+                record
+            );
+            return xorNode;
+
         }
 
         // Critical error
@@ -1916,50 +2065,106 @@ public class Parser
         logop(); // recall itself
         if (unrecoverable) { return null; }
     }
+    
+    // NEQL <relop> ::= ==
+    // NNEQ <relop> ::= !=
+    // NGRT <relop> ::= >
+    // NLSS <relop> ::= <
+    // NLEQ <relop> ::= <=
+    // NGEQ <relop> ::= >=
+
     // <relop> ::= == | != | > | <= | < | >=
-    private void relop() {
+    private SyntaxTreeNode relop() {
         if (tokenList.peek().getType() == TokenType.TEQEQ) {
 
-            // treeeeeeeee
+            SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
+                tokenList.peek().getLexeme(), 
+                tokenList.peek()
+            );
 
-            tokenList.pop(); // ==
+            // ==
+            SyntaxTreeNode equalEqualNode = new SyntaxTreeNode(
+                TreeNodeType.NEQL, 
+                tokenList.pop(), 
+                record
+            );
+            return equalEqualNode;
 
-            return;
         } else if (tokenList.peek().getType() == TokenType.TNEQL) {
 
-            // treeeeeeeee
+            SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
+                tokenList.peek().getLexeme(), 
+                tokenList.peek()
+            );
 
-            tokenList.pop(); // !=
-
-            return;
+            // !=
+            SyntaxTreeNode notEqualNode = new SyntaxTreeNode(
+                TreeNodeType.NNEQ, 
+                tokenList.pop(), 
+                record
+            );
+            return notEqualNode;
+            
         } else if (tokenList.peek().getType() == TokenType.TGRTR) {
 
-            // treeeeeeeee
+            SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
+                tokenList.peek().getLexeme(), 
+                tokenList.peek()
+            );
 
-            tokenList.pop(); // >
+            // >
+            SyntaxTreeNode greaterThanNode = new SyntaxTreeNode(
+                TreeNodeType.NGRT, 
+                tokenList.pop(), 
+                record
+            );
+            return greaterThanNode;
 
-            return;
         } else if (tokenList.peek().getType() == TokenType.TLEQL) {
 
-            // treeeeeeeee
+            SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
+                tokenList.peek().getLexeme(), 
+                tokenList.peek()
+            );
 
-            tokenList.pop(); // <=
+            // <=
+            SyntaxTreeNode lessThanEqualNode = new SyntaxTreeNode(
+                TreeNodeType.NLEQ, 
+                tokenList.pop(), 
+                record
+            );
+            return lessThanEqualNode;
 
-            return;
         } else if (tokenList.peek().getType() == TokenType.TLESS) {
 
-            // treeeeeeeee
+            SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
+                tokenList.peek().getLexeme(), 
+                tokenList.peek()
+            );
 
-            tokenList.pop(); // <
+            // <
+            SyntaxTreeNode lessThanNode = new SyntaxTreeNode(
+                TreeNodeType.NLSS, 
+                tokenList.pop(), 
+                record
+            );
+            return lessThanNode;
 
-            return;
         } else if (tokenList.peek().getType() == TokenType.TGEQL) {
 
-            // treeeeeeeee
+            SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
+                tokenList.peek().getLexeme(), 
+                tokenList.peek()
+            );
 
-            tokenList.pop(); // >=
+            // >=
+            SyntaxTreeNode greaterThanEqualNode = new SyntaxTreeNode(
+                TreeNodeType.NGEQ, 
+                tokenList.pop(), 
+                record
+            );
+            return greaterThanEqualNode;
 
-            return;
         }
         // Critical error
         tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ","==, !=, >, <=, <, or >=", tokenList.peek().getLine(), tokenList.peek().getColumn()));
@@ -1969,122 +2174,235 @@ public class Parser
         if (unrecoverable) { return null; }
     }
 
-    // TODO: Expr & exprtail may be incorrect!
+
     // <expr> ::= <term> <exprtail>
-    private void expr() {
-        term();
+    private SyntaxTreeNode expr() {
+        SyntaxTreeNode termnode = term();
         if (unrecoverable) { return null; }
-        exprtail();
+        SyntaxTreeNode exprNode = exprtail();
         if (unrecoverable) { return null; }
+        if (exprNode == null) {
+            // Special <expr> ::= <term>
+            return termnode;
+        }
+        // NADD <expr> ::= <expr> + <term>
+        // NSUB <expr> ::= <expr> - <term>
+        exprNode.setThirdChild(termnode);
+        return exprNode;
     }
+
     // <exprtail> ::= + <expr> | - <expr> | ε
-    private void exprtail() {
+    private SyntaxTreeNode exprtail() {
         if (tokenList.peek().getType() == TokenType.TPLUS || 
             tokenList.peek().getType() == TokenType.TMINS) {
 
-            tokenList.pop(); // + or -
+            Token expToken = tokenList.pop(); // + or -
 
-            expr();
+            SymbolTableRecord record = currentSymbolTable.getOrCreateToken(expToken.getLexeme(), expToken);
+            SyntaxTreeNode node = new SyntaxTreeNode(expToken.getType() == TokenType.TPLUS ? TreeNodeType.NADD : TreeNodeType.NSUB, expToken, record);
+
+            node.setFirstChild(expr());
             if (unrecoverable) { return null; }
+            return node;
 
         } else {
-            // Eee
+            // epslon
+            return null;
         }
     }
-    // TODO: Term & termtail may be incorrect!
+    
+    // NMUL <term> ::= <term> * <fact>
+    // NDIV <term> ::= <term> / <fact>
+    // NMOD <term> ::= <term> % <fact>
+
     // <term> ::= <fact> <termtail>
-    private void term() {
-        fact();
+    private SyntaxTreeNode term() {
+        SyntaxTreeNode factNode = fact();
         if (unrecoverable) { return null; }
-        termtail();
+        SyntaxTreeNode termNode = termtail();
         if (unrecoverable) { return null; }
+        if (termNode == null) {
+            // Special <term> ::= <fact>
+            return factNode;
+        }
+        // NMUL <term> ::= <term> * <fact>
+        // NDIV <term> ::= <term> / <fact>
+        // NMOD <term> ::= <term> % <fact>
+        termNode.setThirdChild(factNode);
+        return termNode;
     }
 
-    // <termtail> ::= * <term> | / <term> | ε
-    private void termtail() {
+    // <termtail> ::= * <term> | / <term> | % <term> | ε
+    private SyntaxTreeNode termtail() {
         if (tokenList.peek().getType() == TokenType.TSTAR || 
-            tokenList.peek().getType() == TokenType.TDIVD) {
+            tokenList.peek().getType() == TokenType.TDIVD|| 
+            tokenList.peek().getType() == TokenType.TPERC) {
+            Token expToken = tokenList.pop(); // * or / or %
+            SymbolTableRecord record = currentSymbolTable.getOrCreateToken(expToken.getLexeme(), expToken);
 
-            tokenList.pop(); // * or /
+            SyntaxTreeNode node = new SyntaxTreeNode(
+                expToken.getType() == TokenType.TSTAR ? 
+                    TreeNodeType.NMUL : 
+                    expToken.getType() == TokenType.TDIVD ? 
+                        TreeNodeType.NDIV : 
+                        TreeNodeType.NMOD, 
+                expToken, 
+                record
+            );
 
-            term();
+            node.setFirstChild(term());
             if (unrecoverable) { return null; }
 
         } else {
-            // Eee
+            // epslon
+            return null;
         }
     }
+
+    // NPOW <fact> ::= <fact> ^ <exponent>
+    // Special <fact> ::= <exponent>
 
     // <fact> ::= <exponent> <factPrime>
-    private void fact() {
-        exponent();
+    private SyntaxTreeNode fact() {
+        SyntaxTreeNode expNode = exponent();
         if (unrecoverable) { return null; }
-        factPrime();
+
+        SyntaxTreeNode factPrimeNode = factPrime();
         if (unrecoverable) { return null; }
+
+        if (factPrimeNode == null) {
+            // Special <fact> ::= <exponent>
+            return expNode;
+        }
+        // NPOW <fact> ::= <fact> ^ <exponent>
+        factPrimeNode.setThirdChild(expNode);
+        return factPrimeNode;
     }
 
     // <factPrime> ::= ^ <exponent> <factPrime> | ε
-    private void factPrime() {
+    private SyntaxTreeNode factPrime() {
         if (tokenList.peek().getType() == TokenType.TCART) {
-
-            tokenList.pop(); // ^
-
-            exponent();
+            Token expToken = tokenList.pop(); // ^
+            SymbolTableRecord record = currentSymbolTable.getOrCreateToken(expToken.getLexeme(), expToken);
+            SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NPOW, expToken, record);
+            node.setFirstChild(exponent());
             if (unrecoverable) { return null; }
 
-            factPrime();
+            node.setSecondChild(factPrime());
             if (unrecoverable) { return null; }
 
         } else {
-            // Eee
+            // epslon
+            return null;
         }
     }
 
-     // <exponent> ::= <exponentNotBool> | <exponentBool>
-     private void exponent() {
-        if (tokenList.peek().getType() == TokenType.TLPAR) {
+    // Special <exponent> ::= <var>
+    // NILIT <exponent> ::= <intlit>
+    // NFLIT <exponent> ::= <reallit>
+    // Special <exponent> ::= <fncall>
+    // NTRUE <exponent> ::= true
+    // NFALS <exponent> ::= false
+    // Special <exponent> ::= ( <bool> )
 
-            exponentBool();
+     // <exponent> ::= <exponentNotBool> | <exponentBool>
+     private SyntaxTreeNode exponent() {
+        if (tokenList.peek().getType() == TokenType.TLPAR) {
+            
+            // <exponent> ::= ( <bool> )
+            SyntaxTreeNode expBoolNode = exponentBool();
             if (unrecoverable) { return null; }
+            return expBoolNode;
 
         } else {
 
-            exponentNotBool();
+            SyntaxTreeNode expNotBoolNode = exponentNotBool();
             if (unrecoverable) { return null; }
+            return expNotBoolNode;
             
         }
     }
 
-    // <exponentNotBool> ::= <var> | <intlit> | <reallit> | <fncall> | true | false
-    private void exponentNotBool() {
-        if (tokenList.peek().getType() == TokenType.TIDEN) {
+    
 
-            var();
+    // <exponentNotBool> ::= <var> | <intlit> | <reallit> | <fncall> | true | false
+    private SyntaxTreeNode exponentNotBool() {
+        if (tokenList.peek().getType() == TokenType.TIDEN) {
+            // Special <exponent> ::= <var>
+
+            SyntaxTreeNode varNode = var();
             if (unrecoverable) { return null; }
+            return varNode;
 
         } else if (tokenList.peek().getType() == TokenType.TILIT) {
 
+            SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
+                tokenList.peek().getLexeme(), 
+                tokenList.peek()
+            );
+
+            // NILIT <exponent> ::= <intlit>
+            SyntaxTreeNode intNode = new SyntaxTreeNode(
+                TreeNodeType.NILIT, 
+                tokenList.peek(), 
+                record
+            );
+
             tokenList.pop(); // intlit (int)
+
+            return intNode;
 
         } else if (tokenList.peek().getType() == TokenType.TFLIT) {
 
+            SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
+                tokenList.peek().getLexeme(), 
+                tokenList.peek()
+            );
+            // NFLIT <exponent> ::= <reallit>
+            SyntaxTreeNode floatNode = new SyntaxTreeNode(
+                TreeNodeType.NFLIT, 
+                tokenList.peek(), 
+                record
+            );
+
             tokenList.pop(); // reallit (float)
+
+            return floatNode;
 
         } else if (tokenList.peek().getType() == TokenType.TTRUE || 
                    tokenList.peek().getType() == TokenType.TFALS) {
 
+                    SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
+                        tokenList.peek().getLexeme(), 
+                        tokenList.peek()
+                    );
+
+            // NTRUE <exponent> ::= true
+            // NFALS <exponent> ::= false
+            SyntaxTreeNode boolNode = new SyntaxTreeNode(
+                tokenList.peek().getType() == TokenType.TTRUE ? 
+                    TreeNodeType.NTRUE : 
+                    TreeNodeType.NFALS, 
+                tokenList.peek(), 
+                record
+            );
+
             tokenList.pop(); // true or false
 
-        } else {
+            return boolNode;
 
-            fncall();
+        } else {
+            // Special <exponent> ::= <fncall>
+            SyntaxTreeNode fncallNode = fncall();
             if (unrecoverable) { return null; }
+
+            return fncallNode;
 
         }
     }
 
     // <exponentBool> ::= ( <bool> )
-    public void exponentBool() {
+    public SyntaxTreeNode exponentBool() {
             
         if (tokenList.peek().getType() != TokenType.TLPAR) {
             // Critical error
@@ -2095,7 +2413,7 @@ public class Parser
 
         tokenList.pop(); // (
 
-        boolParse();
+        SyntaxTreeNode boolNode = bool();
         if (unrecoverable) { return null; }
 
         if (tokenList.peek().getType() != TokenType.TRPAR) {
@@ -2106,6 +2424,8 @@ public class Parser
         }
 
         tokenList.pop(); // )
+
+        return boolNode;
 
     }
 
