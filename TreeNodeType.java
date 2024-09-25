@@ -1,3 +1,8 @@
+/**
+ * Treenode types in the CD24 language
+ * @author Edwin Sundberg
+ * @author Benjamin Napoli
+ */
 public enum TreeNodeType {
     NPROG,
     NGLOB,
@@ -27,7 +32,7 @@ public enum TreeNodeType {
     NASGNS,
     NIFTH,
     NIFTE,
-    NIFEF,
+    NIFEF, // not usable
     NSWTCH,
     NCASLT,
     NASGN,
@@ -68,8 +73,6 @@ public enum TreeNodeType {
     NFCALL,
     NPRLST,
     NSTRG,
-    // TODO - What is special?
-    SpecialTODO,
     // Special undefined
     NUNDEF,
 }

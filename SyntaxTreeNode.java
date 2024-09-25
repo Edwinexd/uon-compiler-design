@@ -66,10 +66,21 @@ public class SyntaxTreeNode {
         return Optional.ofNullable(thirdChild);
     }
 
-    // TODO: A proper toString method
     @Override
     public String toString() {
-        return nodeType.toString();
+        StringBuilder output = new StringBuilder();
+        output.append(nodeType.toString());
+        if (nodeValue != null) {
+            output.append(" ");
+            output.append(nodeValue.getLexeme());
+        }
+        output.append(" ");
+        int remainder = output.length() % 7;
+        if (remainder != 0) {
+            for (int i = 0; i < 7 - remainder; i++) {
+                output.append(" ");
+            }
+        }
+        return output.toString();
     }
-
 }

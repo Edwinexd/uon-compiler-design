@@ -2,11 +2,11 @@ import java.util.HashMap;
 import java.util.Optional;
 
 /** 
- * @author Edwin Sundberg
- * @author Benjamin Napoli
  * "Recursively" defined symbol table, e.x. a function may have its own symbol table within a SymbolTableRecord
  * and subsequent lookups in the inner symbol table will look up the parent symbol table if the entry is not found.
  * Technically overkill since we can at most have 2 levels in CD24.
+ * @author Edwin Sundberg
+ * @author Benjamin Napoli
 */
 public class SymbolTable {
     private final SymbolTable parent;

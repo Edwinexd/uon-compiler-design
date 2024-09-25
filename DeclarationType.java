@@ -1,3 +1,8 @@
+/**
+ * Bare declaration types, used in combination with Declaration.java to represent different types of declarations.
+ * @author Edwin Sundberg
+ * @author Benjamin Napoli
+ */
 public enum DeclarationType {
     PROGRAM,
     CONSTANT,

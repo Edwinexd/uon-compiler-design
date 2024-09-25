@@ -5,6 +5,11 @@ import java.util.Scanner;
 import java.io.File;
 import java.io.IOException;
 
+/**
+ * Scanner for the CD24 language
+ * @author Edwin Sundberg
+ * @author Benjamin Napoli
+ */
 public class CD24Scanner {
     private int currentLine = 1;
     private int currentColumn = 1;

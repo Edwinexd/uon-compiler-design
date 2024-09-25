@@ -1,3 +1,8 @@
+/**
+ * Different modes the scanner can be in.
+ * @author Edwin Sundberg
+ * @author Benjamin Napoli
+ */
 public enum Mode {
     UNKNOWN,
     IDENTIFIER,

@@ -9,6 +9,11 @@ class Mappings {
     protected static final HashMap<String, TokenType> keywordMap = new HashMap<>();
 }
 
+/**
+ * Token types in the CD24 language
+ * @author Edwin Sundberg
+ * @author Benjamin Napoli
+ */
 public enum TokenType {
     // Token value for end of file
     TTEOF(0),

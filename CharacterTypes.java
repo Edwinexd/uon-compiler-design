@@ -1,3 +1,8 @@
+/**
+ * Methods for classifying characters.
+ * @author Edwin Sundberg
+ * @author Benjamin Napoli
+ */
 public class CharacterTypes {
     public static boolean isDelimiter(char c) {
         return c == ',' ||

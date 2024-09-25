@@ -111,9 +111,14 @@
 
 import java.util.Arrays;
 import java.util.LinkedList;
-import java.util.Optional;
+import java.util.List;
 
-// We are intentionally breaking naming conventions here to match the CD24 grammar
+/**
+ * Parser for CD24 language
+ * Note: We are intentionally breaking naming conventions here (in some places) to match the grammar
+ * @author Edwin Sundberg
+ * @author Benjamin Napoli
+ */
 public class Parser 
 {
     private SymbolTable rootSymbolTable = new SymbolTable();
@@ -128,23 +133,29 @@ public class Parser
         this.tokenOutput = tokenOutput;
     }
     
-    public void initParsing()
-    {
-        SyntaxTreeNode syntaxTree = programParse();
-
-        preOrderTraversal(syntaxTree);
+    public SyntaxTreeNode parse() {
+        return programParse();
     }
 
-    public void preOrderTraversal(SyntaxTreeNode node) {
+    public List<SyntaxTreeNode> traverse(SyntaxTreeNode root) {
+        if (root == null) {
+            return new LinkedList<>();
+        }
+        LinkedList<SyntaxTreeNode> list = new LinkedList<>();
+        traverseNode(root, list);
+        return list;
+
+    }
+
+    private void traverseNode(SyntaxTreeNode node, List<SyntaxTreeNode> list) {
         if (node == null) {
             return;
         }
-    
-        System.out.println(node);
-    
-        preOrderTraversal(node.getFirstChild().orElse(null));
-        preOrderTraversal(node.getSecondChild().orElse(null));
-        preOrderTraversal(node.getThirdChild().orElse(null)); 
+
+        list.add(node);
+        traverseNode(node.getFirstChild().orElse(null), list);
+        traverseNode(node.getSecondChild().orElse(null), list);
+        traverseNode(node.getThirdChild().orElse(null), list);
     }
 
     private boolean typeAtPeek(TokenType ... types) {

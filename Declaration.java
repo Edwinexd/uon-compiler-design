@@ -1,5 +1,10 @@
 import java.util.Optional;
 
+/**
+ * Represents a declaration in the symbol table. Everything from an integer to a "instance" of a struct.
+ * @author Edwin Sundberg
+ * @author Benjamin Napoli
+ */
 public class Declaration {
     public static final Declaration PROGRAM = new Declaration(DeclarationType.PROGRAM);
     public static final Declaration INT = new Declaration(DeclarationType.INT);

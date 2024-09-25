@@ -1,5 +1,10 @@
 import java.util.Optional;
 
+/**
+ * Represents a token in the source code
+ * @author Edwin Sundberg
+ * @author Benjamin Napoli
+ */
 public class Token {
     private final TokenType type;
     private final String lexeme;

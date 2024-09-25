@@ -2,22 +2,28 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.LinkedList;
 
+/**
+ * Output handler for the scanner and parser, handles filewriters, inserting newlines etc.
+ * @author Edwin Sundberg
+ * @author Benjamin Napoli
+ */
 public class TokenOutput {
     // resets when you make a newline
     private static final char NEWLINE_CHAR = (char) 10;
     private int writtenCount;
+    private int writtenCountParser;
     private FileWriter listingFileWriter;
     private FileWriter tokenOutputWriter;
+    private FileWriter parserTokenOutputWriter;
     private int currentLine = 1;
     private LinkedList<String> errors = new LinkedList<String>();
     private LinkedList<String> parserErrors = new LinkedList<String>();
 
-    /// i feel like the writer opening every time might cause too much overhead
-
-    public void initializeWriters(String errorPath, String tokenPath) {
+    public void initializeWriters(String errorPath, String tokenPath, String parserTokenPath) {
         try {
             listingFileWriter = new FileWriter(errorPath);
             tokenOutputWriter = new FileWriter(tokenPath);
+            parserTokenOutputWriter = new FileWriter(parserTokenPath);
 
             printToListingFile(currentLine + ". ");
         } catch (IOException e) {
@@ -29,6 +35,7 @@ public class TokenOutput {
         try {
             listingFileWriter.close();
             tokenOutputWriter.close();
+            parserTokenOutputWriter.close();
         } catch (IOException e) {
             System.err.println("Error closing writer: " + e.getMessage());
         }
@@ -73,6 +80,35 @@ public class TokenOutput {
     private void appendNewLine() {
         writeText("\n");
         writtenCount = 0;
+    }
+
+    public void writeParserNode(SyntaxTreeNode node) {
+        if (parserTokenOutputWriter == null) {
+            throw new IllegalStateException("Must initialise writers before calling this method");
+        }
+        String output = node.toString();
+
+        // if we have exceeded 70 characters / "10 columns"
+        if (writtenCountParser > 70) {
+            appendNewLineParser();
+        }
+
+        writeTextParser(output);
+    }
+
+    private void writeTextParser(String text) {
+        try {
+            System.out.print(text);
+            parserTokenOutputWriter.write(text);
+            writtenCountParser += text.length();
+        } catch (IOException e) {
+            System.err.println("Error writing to file: " + e.getMessage());
+        }
+    }
+
+    private void appendNewLineParser() {
+        writeTextParser("\n");
+        writtenCountParser = 0;
     }
 
     public void feedChar(char character) {
