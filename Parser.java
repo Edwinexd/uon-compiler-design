@@ -36,7 +36,6 @@
 // <decl> ::=  <id> : <decltail>
 // <decltail> ::= <typeid> | <stypeOrStructid>
 
-
 // <mainbody> ::= main <slist> begin <stats> end CD24 <id>
 // <slist> ::= <sdecl> <slistPrime>
 // <slistPrime> ::= , <sdecl> <slistPrime> | ε
@@ -101,7 +100,6 @@
 // <fncall> ::= <id> ( <fncalltail>
 // <fncalltail> ::= <elist> ) | )
 
-
 // <prlist> ::= <printitem> <prlisttail>
 // <prlisttail> ::= , <prlist> | ε
 // <printitem> ::= <expr> | <string>
@@ -115,24 +113,24 @@ import java.util.List;
 
 /**
  * Parser for CD24 language
- * Note: We are intentionally breaking naming conventions here (in some places) to match the grammar
+ * Note: We are intentionally breaking naming conventions here (in some places)
+ * to match the grammar
+ * 
  * @author Edwin Sundberg
  * @author Benjamin Napoli
  */
-public class Parser 
-{
+public class Parser {
     private SymbolTable rootSymbolTable = new SymbolTable();
     private SymbolTable currentSymbolTable = rootSymbolTable;
-    public LinkedList<Token> tokenList = new LinkedList<Token>();  
+    public LinkedList<Token> tokenList = new LinkedList<Token>();
     private TokenOutput tokenOutput;
     private boolean unrecoverable = false;
 
-    public Parser(LinkedList<Token> list, TokenOutput tokenOutput) 
-    {
+    public Parser(LinkedList<Token> list, TokenOutput tokenOutput) {
         tokenList = list;
         this.tokenOutput = tokenOutput;
     }
-    
+
     public SyntaxTreeNode parse() {
         return programParse();
     }
@@ -158,22 +156,23 @@ public class Parser
         traverseNode(node.getThirdChild().orElse(null), list);
     }
 
-    private boolean typeAtPeek(TokenType ... types) {
+    private boolean typeAtPeek(TokenType... types) {
         return !tokenList.isEmpty() && Arrays.stream(types).anyMatch(t -> t == tokenList.peek().getType());
     }
 
-    private boolean notTypeAtPeek(TokenType ... types) {
+    private boolean notTypeAtPeek(TokenType... types) {
         return !tokenList.isEmpty() && Arrays.stream(types).noneMatch(t -> t == tokenList.peek().getType());
-    } 
+    }
 
-    private void safePeek(String tokenTypeExplanation, TokenType ... types) {
+    private void safePeek(String tokenTypeExplanation, TokenType... types) {
         // TOOD: If find keyword or delimiter, stop le pop!
         if (!tokenList.isEmpty() && typeAtPeek(types)) {
             return;
         }
 
         if (!tokenList.isEmpty()) {
-            tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ", tokenTypeExplanation, tokenList.peek().getLine(), tokenList.peek().getColumn()));
+            tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ",
+                    tokenTypeExplanation, tokenList.peek().getLine(), tokenList.peek().getColumn()));
             unrecoverable = popTillTokenType(types);
         } else {
             unrecoverable = true;
@@ -184,15 +183,19 @@ public class Parser
         return new SyntaxTreeNode(TreeNodeType.NUNDEF);
     }
 
-    //#region <program> ::= CD24 <id> <globals> <funcs> <mainbody>
+    // #region <program> ::= CD24 <id> <globals> <funcs> <mainbody>
     private SyntaxTreeNode programParse() {
         safePeek("CD24", TokenType.TCD24);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // CD24
 
         safePeek("Identifier for CD24", TokenType.TIDEN);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         Token idToken = tokenList.pop();
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
@@ -210,10 +213,12 @@ public class Parser
             SyntaxTreeNode funcs = funcs();
             rootNode.setSecondChild(funcs);
         }
-        
+
         // Someone decided not to include a mandatory main function
         safePeek("main", TokenType.TMAIN);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         currentSymbolTable = record.getScope();
         SyntaxTreeNode mainBody = mainbody();
@@ -222,51 +227,54 @@ public class Parser
 
         return rootNode;
     }
-    //endregion
+    // endregion
 
-    //#region <globals> ::= <consts> <types> <arrays>
+    // #region <globals> ::= <consts> <types> <arrays>
     private SyntaxTreeNode globals() {
         SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NGLOB);
         if (typeAtPeek(TokenType.TCONS)) {
             SyntaxTreeNode constsNode = consts();
             node.setFirstChild(constsNode);
-            }
+        }
         if (typeAtPeek(TokenType.TTYPD)) {
             SyntaxTreeNode typesNode = types();
             node.setSecondChild(typesNode);
-            }
+        }
         if (typeAtPeek(TokenType.TARRD)) {
             SyntaxTreeNode arraysNode = arrays();
             node.setThirdChild(arraysNode);
-            }
+        }
         return node;
     }
-    //endregion
+    // endregion
 
-    //#region <consts> ::= constants <initlist> | ε
+    // #region <consts> ::= constants <initlist> | ε
     private SyntaxTreeNode consts() {
         // this does not produce its own node and just returns the initlist node
         safePeek("constants", TokenType.TCONS);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
         tokenList.pop(); // constants
         return initlist();
     }
-    //endregion
+    // endregion
 
-    //#region <initlist> ::= <init> <initlisttail>
+    // #region <initlist> ::= <init> <initlisttail>
     private SyntaxTreeNode initlist() {
         SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NILIST);
         node.setFirstChild(init());
-        // for some reason they dont want us to use the second child when we have two possible children
+        // for some reason they dont want us to use the second child when we have two
+        // possible children
         SyntaxTreeNode tail = initlisttail();
         if (tail != null) {
             node.setThirdChild(tail);
         }
         return node;
     }
-    //endregion
+    // endregion
 
-    //#region <initlisttail> ::= , <init> <initslisttail> | ε
+    // #region <initlisttail> ::= , <init> <initslisttail> | ε
     private SyntaxTreeNode initlisttail() {
         if (notTypeAtPeek(TokenType.TCOMA)) {
             // this is an epsilon production
@@ -286,12 +294,14 @@ public class Parser
 
         return node;
     }
-    //endregion
+    // endregion
 
-    //#region <init> ::= <id> = <expr>
+    // #region <init> ::= <id> = <expr>
     private SyntaxTreeNode init() {
         safePeek("Identifier", TokenType.TIDEN);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         Token idToken = tokenList.pop();
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
@@ -299,7 +309,9 @@ public class Parser
         record.setDeclaration(Declaration.CONSTANT);
 
         safePeek("=", TokenType.TEQUL);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // =
 
@@ -308,21 +320,23 @@ public class Parser
         node.setFirstChild(expr());
         return node;
     }
-    //endregion
+    // endregion
 
-    //#region <types> ::= typedef <typelist> | ε
+    // #region <types> ::= typedef <typelist> | ε
     private SyntaxTreeNode types() {
         // this does not produce its own node and just returns the typelist node
         safePeek("typedef", TokenType.TTYPD);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // typedef
 
         return typelist();
     }
-    //endregion
+    // endregion
 
-    //#region <typelist> ::= <type> <typelisttail>
+    // #region <typelist> ::= <type> <typelisttail>
     private SyntaxTreeNode typelist() {
         SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NTYPEL);
         node.setFirstChild(type());
@@ -332,9 +346,9 @@ public class Parser
         }
         return node;
     }
-    //#endregion
+    // #endregion
 
-    //#region <typelisttail> ::= <type> <typelisttail> | ε
+    // #region <typelisttail> ::= <type> <typelisttail> | ε
     private SyntaxTreeNode typelisttail() {
         if (notTypeAtPeek(TokenType.TIDEN)) {
             // this is an epsilon production
@@ -348,22 +362,25 @@ public class Parser
         }
         return node;
     }
-    //#endregion
+    // #endregion
 
-    //#region <type> ::= N/A (choosing which type to parse based on lookahead)
+    // #region <type> ::= N/A (choosing which type to parse based on lookahead)
     /*
      * More or less a "proxy" for calling the correct type function.
      */
-    // TODO: This won't work since symbol table records are not set at this point!
     // <type> ::= <typeid> def array <typetype> | <structid> def <typestruct>
     private SyntaxTreeNode type() {
         safePeek("Identifier", TokenType.TIDEN);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         Token idToken = tokenList.pop();
 
         safePeek("def", TokenType.TTDEF);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // def
 
@@ -374,14 +391,16 @@ public class Parser
             return typestruct(idToken);
         }
     }
-    //#endregion
+    // #endregion
 
-    //#region <type> ::= <fields> end
-        private SyntaxTreeNode typestruct(Token idToken) {
+    // #region <type> ::= <fields> end
+    private SyntaxTreeNode typestruct(Token idToken) {
         SyntaxTreeNode fieldsNode = fields();
 
         safePeek("end", TokenType.TTEND);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // end
 
@@ -394,38 +413,49 @@ public class Parser
 
         return node;
     }
-    //endregion
+    // endregion
 
-    //#region <type> ::= [ <expr> ] of <structid> end
-        private SyntaxTreeNode typetype(Token idToken) {
+    // #region <type> ::= [ <expr> ] of <structid> end
+    private SyntaxTreeNode typetype(Token idToken) {
         safePeek("[", TokenType.TLBRK);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // [
 
         SyntaxTreeNode exprNode = expr();
-        
+
         safePeek("]", TokenType.TRBRK);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // ]
 
         safePeek("of", TokenType.TTTOF);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
-        tokenList.pop(); // of 
+        tokenList.pop(); // of
 
         safePeek("Identifier", TokenType.TIDEN);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         Token structIdToken = tokenList.pop();
 
         // create record for new declaration
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
-        record.setDeclaration(Declaration.arrayOfType(currentSymbolTable.getOrCreateToken(structIdToken.getLexeme(), structIdToken)));
+        record.setDeclaration(
+                Declaration.arrayOfType(currentSymbolTable.getOrCreateToken(structIdToken.getLexeme(), structIdToken)));
 
         safePeek("end", TokenType.TTEND);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // end
 
@@ -433,9 +463,9 @@ public class Parser
         node.setFirstChild(exprNode);
         return node;
     }
-    //endregion
+    // endregion
 
-    //#region <fields> ::= <sdecl> <fieldstail>
+    // #region <fields> ::= <sdecl> <fieldstail>
     private SyntaxTreeNode fields() {
         SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NFLIST);
         node.setFirstChild(sdecl());
@@ -445,9 +475,9 @@ public class Parser
         }
         return node;
     }
-    //endregion
+    // endregion
 
-    //#region <fieldstail> ::= <sdecl> <fieldstail> | ε
+    // #region <fieldstail> ::= <sdecl> <fieldstail> | ε
     private SyntaxTreeNode fieldstail() {
         if (notTypeAtPeek(TokenType.TIDEN)) {
             // this is an epsilon production
@@ -461,17 +491,21 @@ public class Parser
         }
         return node;
     }
-    //endregion
+    // endregion
 
-    //#region <sdecl> ::= <id> : <stypeOrStructid>
+    // #region <sdecl> ::= <id> : <stypeOrStructid>
     private SyntaxTreeNode sdecl() {
         safePeek("Identifier", TokenType.TIDEN);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         Token idToken = tokenList.pop();
 
         safePeek(":", TokenType.TCOLN);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // :
         TreeNodeType outType;
@@ -488,19 +522,22 @@ public class Parser
         SyntaxTreeNode node = new SyntaxTreeNode(outType, idToken, record);
         return node;
     }
-    //endregion
+    // endregion
 
-    //#region <arrays> ::= arraydef <arrdecls> | ε
+    // #region <arrays> ::= arraydef <arrdecls> | ε
     private SyntaxTreeNode arrays() {
-        // Note: this will not have been called if the next token is not arraydef so should prob be removed
+        // Note: this will not have been called if the next token is not arraydef so
+        // should prob be removed
         safePeek("arraydef", TokenType.TARRD);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
         tokenList.pop(); // arraydef
         return arrdecls();
     }
-    //endregion
+    // endregion
 
-    //#region <arrdecls> ::= <arrdecl> <arrdeclstail>
+    // #region <arrdecls> ::= <arrdecl> <arrdeclstail>
     private SyntaxTreeNode arrdecls() {
         SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NALIST);
         node.setFirstChild(arrdecl());
@@ -510,9 +547,9 @@ public class Parser
         }
         return node;
     }
-    //endregion
+    // endregion
 
-    //#region <arrdeclstail> ::= , <arrdecl> <arrdeclstail> | ε 
+    // #region <arrdeclstail> ::= , <arrdecl> <arrdeclstail> | ε
     private SyntaxTreeNode arrdeclstail() {
         if (notTypeAtPeek(TokenType.TCOMA)) {
             // this is an epsilon production
@@ -527,22 +564,28 @@ public class Parser
         }
         return node;
     }
-    //endregion
+    // endregion
 
-    //#region <arrdecl> ::= <id> : <typeid>
+    // #region <arrdecl> ::= <id> : <typeid>
     private SyntaxTreeNode arrdecl() {
         safePeek("Identifier", TokenType.TIDEN);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         Token idToken = tokenList.pop();
 
         safePeek(":", TokenType.TCOLN);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // :
 
         safePeek("Identifier", TokenType.TIDEN);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
         Token typeIdToke = tokenList.pop();
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
         SymbolTableRecord typeRecord = currentSymbolTable.getOrCreateToken(typeIdToke.getLexeme(), typeIdToke);
@@ -554,55 +597,59 @@ public class Parser
         SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NARRD, idToken, record);
         return node;
     }
-    //endregion
+    // endregion
 
-    //#region <funcs> ::= <funcPrime> 
+    // #region <funcs> ::= <func> <funcs> | ε
     private SyntaxTreeNode funcs() {
-        return funcsPrime();
-    }
-    //endregion
-
-    //#region <funcPrime> ::= <func> <funcPrime> | ε
-    private SyntaxTreeNode funcsPrime() {
         if (notTypeAtPeek(TokenType.TFUNC)) {
             return null;
         }
         SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NFUNCS);
         node.setFirstChild(func());
-        SyntaxTreeNode tail = funcsPrime();
+        SyntaxTreeNode tail = funcs();
         if (tail != null) {
             node.setThirdChild(tail);
         }
         return node;
     }
-    //endregion
+    // endregion
 
-    //#region <func> ::= func <id> ( <plist> ) : <rtype> <funcbody>
+    // #region <func> ::= func <id> ( <plist> ) : <rtype> <funcbody>
     private SyntaxTreeNode func() {
         safePeek("func", TokenType.TFUNC);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // func
         safePeek("Identifier", TokenType.TIDEN);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         Token idToken = tokenList.pop();
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
         record.setDeclaration(Declaration.FUNCTION);
 
         safePeek("(", TokenType.TLPAR);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // (
         // TODO: Should be part of func parameters + scope
         SyntaxTreeNode plistNode = plist();
         safePeek(")", TokenType.TRPAR);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // )
 
         safePeek(":", TokenType.TCOLN);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // :
         record.setReturnType(rtype());
@@ -620,9 +667,9 @@ public class Parser
         node.setThirdChild(stats);
         return node;
     }
-    //endregion
+    // endregion
 
-    //#region <rtype> ::= <stype> | void
+    // #region <rtype> ::= <stype> | void
     private Declaration rtype() {
         if (typeAtPeek(TokenType.TVOID)) {
             tokenList.pop();
@@ -630,18 +677,18 @@ public class Parser
         }
         return stype();
     }
-    //endregion
+    // endregion
 
-    //#region <plist> ::= <params> | ε
+    // #region <plist> ::= <params> | ε
     private SyntaxTreeNode plist() {
         if (notTypeAtPeek(TokenType.TIDEN, TokenType.TCONS)) {
             return null;
         }
         return params();
     }
-    //endregion
-    
-    //#region <params> ::= <param> <paramsPrime>
+    // endregion
+
+    // #region <params> ::= <param> <paramsPrime>
     private SyntaxTreeNode params() {
         SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NPLIST);
         node.setFirstChild(param());
@@ -653,9 +700,9 @@ public class Parser
 
         return node;
     }
-    //endregion
+    // endregion
 
-    //#region <paramsPrime> ::= , <param> <paramsPrime> | ε
+    // #region <paramsPrime> ::= , <param> <paramsPrime> | ε
     private SyntaxTreeNode paramsPrime() {
         if (notTypeAtPeek(TokenType.TCOMA)) {
             return null;
@@ -669,19 +716,23 @@ public class Parser
         }
         return node;
     }
-    //endregion
+    // endregion
 
-    //#region <param> ::= <parammaybeconst> <id> : <paramtail>
+    // #region <param> ::= <parammaybeconst> <id> : <paramtail>
     private SyntaxTreeNode param() {
         boolean isConst = parammaybeconst();
 
         safePeek("Identifier", TokenType.TIDEN);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         Token idToken = tokenList.pop();
 
         safePeek(":", TokenType.TCOLN);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // :
 
@@ -701,9 +752,9 @@ public class Parser
         // TODO: This should be unreachable?
         throw new RuntimeException("Critical error, expected stype or array type");
     }
-    //endregion
+    // endregion
 
-    //#region <parammaybeconst> ::= const | ε
+    // #region <parammaybeconst> ::= const | ε
     private boolean parammaybeconst() {
         if (notTypeAtPeek(TokenType.TCONS)) {
             return false;
@@ -711,9 +762,9 @@ public class Parser
         tokenList.pop(); // const
         return true;
     }
-    //endregion
+    // endregion
 
-    //#region <paramtail> ::= <typeid> | <stypeOrStructid>
+    // #region <paramtail> ::= <typeid> | <stypeOrStructid>
     private Declaration paramtail(boolean isConst) {
         // TODO: This is wrong since stypeOrStructid could be ok...
         safePeek("Identifier", TokenType.TIDEN);
@@ -728,39 +779,41 @@ public class Parser
         }
         return stypeOrStructid();
     }
-    //endregion
+    // endregion
 
-    //#region <funcbody> ::= <locals> begin <stats> end
+    // #region <funcbody> ::= <locals> begin <stats> end
     private SyntaxTreeNode[] funcbody() {
         SyntaxTreeNode[] nodes = new SyntaxTreeNode[2];
         nodes[0] = locals();
         safePeek("begin", TokenType.TBEGN);
         if (unrecoverable) {
-            return new SyntaxTreeNode[] {new SyntaxTreeNode(TreeNodeType.NUNDEF), new SyntaxTreeNode(TreeNodeType.NUNDEF)};
+            return new SyntaxTreeNode[] { new SyntaxTreeNode(TreeNodeType.NUNDEF),
+                    new SyntaxTreeNode(TreeNodeType.NUNDEF) };
         }
         tokenList.pop(); // begin
         nodes[1] = stats();
 
         safePeek("end", TokenType.TTEND);
         if (unrecoverable) {
-            return new SyntaxTreeNode[] {new SyntaxTreeNode(TreeNodeType.NUNDEF), new SyntaxTreeNode(TreeNodeType.NUNDEF)};
+            return new SyntaxTreeNode[] { new SyntaxTreeNode(TreeNodeType.NUNDEF),
+                    new SyntaxTreeNode(TreeNodeType.NUNDEF) };
         }
         tokenList.pop(); // end
 
         return nodes;
     }
-    //endregion
+    // endregion
 
-    //#region <locals> ::= <dlist> | ε
+    // #region <locals> ::= <dlist> | ε
     private SyntaxTreeNode locals() {
         if (notTypeAtPeek(TokenType.TIDEN)) {
             return null;
         }
         return dlist();
     }
-    //endregion
-    
-    //#region <dlist> ::= <decl> <dlistPrime>
+    // endregion
+
+    // #region <dlist> ::= <decl> <dlistPrime>
     private SyntaxTreeNode dlist() {
         SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NDLIST);
         node.setFirstChild(decl());
@@ -770,9 +823,9 @@ public class Parser
         }
         return node;
     }
-    //endregion
+    // endregion
 
-    //#region <dlistPrime> ::= , <dlist> | ε
+    // #region <dlistPrime> ::= , <dlist> | ε
     private SyntaxTreeNode dlistPrime() {
         if (notTypeAtPeek(TokenType.TCOMA)) {
             return null;
@@ -780,17 +833,21 @@ public class Parser
         tokenList.pop(); // ,
         return dlist();
     }
-    //endregion
+    // endregion
 
-    //#region <decl> ::=  <id> : <decltail>
+    // #region <decl> ::= <id> : <decltail>
     private SyntaxTreeNode decl() {
         safePeek("Identifier", TokenType.TIDEN);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         Token idToken = tokenList.pop();
 
         safePeek(":", TokenType.TCOLN);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // :
 
@@ -811,43 +868,52 @@ public class Parser
         // TODO: This should be unreachable?
         throw new RuntimeException("Critical error, expected stype or array type");
     }
-    //endregion
+    // endregion
 
-    //#region <decltail> ::= <typeid> | <stypeOrStructid>
+    // #region <decltail> ::= <typeid> | <stypeOrStructid>
     private Declaration decltail() {
         return paramtail(false); // Same as paramtail but not const
     }
-    //endregion
+    // endregion
 
-    //#region <mainbody> ::= main <slist> begin <stats> end CD24 <id>
+    // #region <mainbody> ::= main <slist> begin <stats> end CD24 <id>
     private SyntaxTreeNode mainbody() {
         safePeek("main", TokenType.TMAIN);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // main
 
         SyntaxTreeNode slistNode = slist();
 
         safePeek("begin", TokenType.TBEGN);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // begin
 
         SyntaxTreeNode statsNode = stats();
 
         safePeek("end", TokenType.TTEND);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // end
 
         safePeek("CD24", TokenType.TCD24);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // CD24
 
-
         safePeek("Identifier", TokenType.TIDEN);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
         Token idToken = tokenList.pop();
 
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
@@ -859,9 +925,9 @@ public class Parser
         node.setSecondChild(statsNode);
         return node;
     }
-    //endregion
-    
-    //#region <slist> ::= <sdecl> <slistPrime>
+    // endregion
+
+    // #region <slist> ::= <sdecl> <slistPrime>
     private SyntaxTreeNode slist() {
         SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NSDLIST);
         node.setFirstChild(sdecl());
@@ -873,9 +939,9 @@ public class Parser
 
         return node;
     }
-    //endregion
+    // endregion
 
-    //#region <slistPrime> ::= , <sdecl> <slistPrime> | ε
+    // #region <slistPrime> ::= , <sdecl> <slistPrime> | ε
     private SyntaxTreeNode slistPrime() {
         if (notTypeAtPeek(TokenType.TCOMA)) {
             return null;
@@ -893,13 +959,15 @@ public class Parser
 
         return node;
     }
-    //endregion
+    // endregion
 
     // <stypeOrStructid> ::= <stype> | <structid>
     private Declaration stypeOrStructid() {
         safePeek("Struct Identifier", TokenType.TIDEN, TokenType.TINTG, TokenType.TFLOT, TokenType.TBOOL);
         // TODO: This one is special
-        if (unrecoverable) { throw new RuntimeException("Critical error, expected a struct identifier or a type"); }
+        if (unrecoverable) {
+            throw new RuntimeException("Critical error, expected a struct identifier or a type");
+        }
 
         Token token = tokenList.pop();
         TokenType tokenType = token.getType();
@@ -915,19 +983,24 @@ public class Parser
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
         if (record.getDeclaration().isPresent() && !record.getDeclaration().get().equals(Declaration.STRUCT_TYPE)) {
             // TODO Incorrect type
-            //         unrecoverable = popTillTokenType(new LinkedList<TokenType>(Arrays.asList(TokenType.TINTG, TokenType.TFLOT, TokenType.TBOOL, TokenType.TIDEN)));
-            tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ","Struct Identifier", tokenList.peek().getLine(), tokenList.peek().getColumn()));
-            //throw new RuntimeException("Critical error, expected a struct identifier");
+            // unrecoverable = popTillTokenType(new
+            // LinkedList<TokenType>(Arrays.asList(TokenType.TINTG, TokenType.TFLOT,
+            // TokenType.TBOOL, TokenType.TIDEN)));
+            tokenOutput.feedParserError(String.format("Syntax error - Missing %s (line %d, column %d) ",
+                    "Struct Identifier", tokenList.peek().getLine(), tokenList.peek().getColumn()));
+            // throw new RuntimeException("Critical error, expected a struct identifier");
         }
         return Declaration.structOfType(record);
-        
+
     }
-    //endregion
+    // endregion
 
     // <stype> ::= int | float | bool
     private Declaration stype() {
         safePeek("Type", TokenType.TINTG, TokenType.TFLOT, TokenType.TBOOL);
-        if (unrecoverable) { throw new RuntimeException("Critical error, expected a type"); }
+        if (unrecoverable) {
+            throw new RuntimeException("Critical error, expected a type");
+        }
         Token token = tokenList.pop();
         TokenType tokenType = token.getType();
         if (tokenType == TokenType.TINTG) {
@@ -945,25 +1018,31 @@ public class Parser
         return statstail(true);
     }
 
-
     // <statstail> ::= <stat>; <statstail> | <strstat> <statstail> | ε
-        private SyntaxTreeNode statstail(boolean forbidEpsilon) {
-        boolean strstatOrstat = typeAtPeek(TokenType.TTFOR, TokenType.TIFTH, TokenType.TSWTH, TokenType.TTTDO, TokenType.TREPT, TokenType.TIDEN, TokenType.TINPT, TokenType.TPRNT, TokenType.TPRLN, TokenType.TRETN);
+    private SyntaxTreeNode statstail(boolean forbidEpsilon) {
+        boolean strstatOrstat = typeAtPeek(TokenType.TTFOR, TokenType.TIFTH, TokenType.TSWTH, TokenType.TTTDO,
+                TokenType.TREPT, TokenType.TIDEN, TokenType.TINPT, TokenType.TPRNT, TokenType.TPRLN, TokenType.TRETN);
         if (strstatOrstat && forbidEpsilon) {
-            safePeek("Statement", TokenType.TTFOR, TokenType.TIFTH, TokenType.TSWTH, TokenType.TTTDO, TokenType.TREPT, TokenType.TIDEN, TokenType.TINPT, TokenType.TPRNT, TokenType.TPRLN, TokenType.TRETN);
-            if (unrecoverable) { return getErrorNode(); }
+            safePeek("Statement", TokenType.TTFOR, TokenType.TIFTH, TokenType.TSWTH, TokenType.TTTDO, TokenType.TREPT,
+                    TokenType.TIDEN, TokenType.TINPT, TokenType.TPRNT, TokenType.TPRLN, TokenType.TRETN);
+            if (unrecoverable) {
+                return getErrorNode();
+            }
         }
-        
+
         if (!strstatOrstat && !forbidEpsilon) {
             return null;
         }
-        
+
         SyntaxTreeNode firstNode;
         // stat
-        if (typeAtPeek(TokenType.TREPT, TokenType.TIDEN, TokenType.TINPT, TokenType.TPRNT, TokenType.TPRLN, TokenType.TRETN)) {
+        if (typeAtPeek(TokenType.TREPT, TokenType.TIDEN, TokenType.TINPT, TokenType.TPRNT, TokenType.TPRLN,
+                TokenType.TRETN)) {
             firstNode = stat();
             safePeek(";", TokenType.TSEMI);
-            if (unrecoverable) { return getErrorNode(); }
+            if (unrecoverable) {
+                return getErrorNode();
+            }
             tokenList.pop(); // ;
         } else {
             firstNode = strstat();
@@ -984,12 +1063,13 @@ public class Parser
         return node;
     }
 
-
     // <strstat> ::= <forstat> | <ifstat> | <switchstat> | <dostat>
     private SyntaxTreeNode strstat() {
         safePeek("Statement", TokenType.TTFOR, TokenType.TIFTH, TokenType.TSWTH, TokenType.TTTDO);
-        if (unrecoverable) { return getErrorNode(); }
-        
+        if (unrecoverable) {
+            return getErrorNode();
+        }
+
         if (typeAtPeek(TokenType.TTFOR)) {
             return forstat();
         }
@@ -1002,11 +1082,13 @@ public class Parser
         return dostat();
     }
 
-
     // <stat> ::= <repstat> | <iostat> | <returnstat> | <asgnstatorcallstat>
     private SyntaxTreeNode stat() {
-        safePeek("Statement", TokenType.TREPT, TokenType.TINPT, TokenType.TPRNT, TokenType.TPRLN, TokenType.TRETN, TokenType.TIDEN);
-        if (unrecoverable) { return getErrorNode(); }
+        safePeek("Statement", TokenType.TREPT, TokenType.TINPT, TokenType.TPRNT, TokenType.TPRLN, TokenType.TRETN,
+                TokenType.TIDEN);
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         if (typeAtPeek(TokenType.TREPT)) {
             return repstat();
@@ -1019,17 +1101,21 @@ public class Parser
         }
         return asgnstatorcallstat();
     }
+
     // <asgnstatorcallstat> ::= <id> <asgnstatorcallstattail>
     private SyntaxTreeNode asgnstatorcallstat() {
         safePeek("Identifier", TokenType.TIDEN);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         Token idToken = tokenList.pop();
 
         return asgnstatorcallstattail(idToken);
     }
+
     // <asgnstatorcallstattail> ::= <vartail> <asgnstattail> | ( <callstattail>
-        private SyntaxTreeNode asgnstatorcallstattail(Token idToken) {
+    private SyntaxTreeNode asgnstatorcallstattail(Token idToken) {
         if (typeAtPeek(TokenType.TLPAR)) {
             tokenList.pop(); // (
             // TLPAR
@@ -1061,33 +1147,43 @@ public class Parser
     // <forstat> ::= for ( <asgnlist> ; <bool> ) <stats> end
     private SyntaxTreeNode forstat() {
         safePeek("for", TokenType.TTFOR);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // for
 
         safePeek("(", TokenType.TLPAR);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // (
 
         SyntaxTreeNode asgnlistNode = asgnlist();
 
         safePeek(";", TokenType.TSEMI);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // ;
 
         SyntaxTreeNode boolNode = bool();
 
         safePeek(")", TokenType.TRPAR);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // )
 
         SyntaxTreeNode statsNode = stats();
 
         safePeek("end", TokenType.TTEND);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // end
 
@@ -1101,26 +1197,34 @@ public class Parser
     // <repstat> ::= repeat ( <asgnlist> ) <stats> until <bool>
     private SyntaxTreeNode repstat() {
         safePeek("repeat", TokenType.TREPT);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // repeat
 
         safePeek("(", TokenType.TLPAR);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // (
 
         SyntaxTreeNode asgnlistNode = asgnlist();
 
         safePeek(")", TokenType.TRPAR);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // )
 
         SyntaxTreeNode statsNode = stats();
 
         safePeek("until", TokenType.TUNTL);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // until
 
@@ -1132,37 +1236,46 @@ public class Parser
         result.setThirdChild(boolNode);
         return result;
     }
-    
+
     // <dostat> ::= do <stats> while ( <bool> ) end
     private SyntaxTreeNode dostat() {
 
         safePeek("do", TokenType.TTTDO);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // do
 
         SyntaxTreeNode statsNode = stats();
-        
+
         safePeek("while", TokenType.TWHIL);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // while
 
         safePeek("(", TokenType.TLPAR);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // (
-
 
         SyntaxTreeNode boolNode = bool();
 
         safePeek(")", TokenType.TRPAR);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // )
 
         safePeek("end", TokenType.TTEND);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // end
 
@@ -1172,6 +1285,7 @@ public class Parser
 
         return result;
     }
+
     // <asgnlist> ::= <alist> | ε
     private SyntaxTreeNode asgnlist() {
         if (notTypeAtPeek(TokenType.TIDEN)) {
@@ -1212,19 +1326,25 @@ public class Parser
     // <ifstat> ::= if ( <bool> ) <stats> <ifstattail> end
     private SyntaxTreeNode ifstat() {
         safePeek("if", TokenType.TIFTH);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // if
 
         safePeek("(", TokenType.TLPAR);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // (
 
         SyntaxTreeNode boolNode = bool();
 
         safePeek(")", TokenType.TRPAR);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // )
 
@@ -1234,7 +1354,9 @@ public class Parser
         // tail can either be null, stats (else) or an ifstat (elif)
 
         safePeek("end", TokenType.TTEND);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // end
 
@@ -1251,7 +1373,7 @@ public class Parser
     // <ifstattail> ::= else <stats> | elif (<bool>) <stats> | ε
     private SyntaxTreeNode ifstattail() {
         if (tokenList.peek().getType() == TokenType.TELSE) {
-            
+
             tokenList.pop(); // else
 
             return stats();
@@ -1260,14 +1382,18 @@ public class Parser
             tokenList.pop(); // elif
 
             safePeek("(", TokenType.TLPAR);
-            if (unrecoverable) { return getErrorNode(); }
+            if (unrecoverable) {
+                return getErrorNode();
+            }
 
             tokenList.pop(); // (
 
             SyntaxTreeNode boolNode = bool();
 
             safePeek(")", TokenType.TRPAR);
-            if (unrecoverable) { return getErrorNode(); }
+            if (unrecoverable) {
+                return getErrorNode();
+            }
 
             tokenList.pop(); // )
 
@@ -1280,38 +1406,48 @@ public class Parser
             return result;
         }
         // ε
-        return null; 
+        return null;
     }
 
     // <switchstat> ::= switch ( <expr> ) begin <caselist> end
     private SyntaxTreeNode switchstat() {
 
         safePeek("switch", TokenType.TSWTH);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // switch
-            
+
         safePeek("(", TokenType.TLPAR);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // (
 
         SyntaxTreeNode exprNode = expr();
 
         safePeek(")", TokenType.TRPAR);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // )
 
         safePeek("begin", TokenType.TBEGN);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // begin
 
         SyntaxTreeNode caselistNode = caselist();
 
         safePeek("end", TokenType.TTEND);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // end
 
@@ -1326,7 +1462,9 @@ public class Parser
     // <caselist> ::= case <expr> : <stats> break ; <caselist> | default : <stats>
     private SyntaxTreeNode caselist() {
         safePeek("case or default", TokenType.TCASE, TokenType.TDFLT);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         if (typeAtPeek(TokenType.TCASE)) {
 
@@ -1335,19 +1473,25 @@ public class Parser
             SyntaxTreeNode exprNode = expr();
 
             safePeek(":", TokenType.TCOLN);
-            if (unrecoverable) { return getErrorNode(); }
-            
+            if (unrecoverable) {
+                return getErrorNode();
+            }
+
             tokenList.pop(); // :
 
             SyntaxTreeNode statsNode = stats();
 
             safePeek("break", TokenType.TBREK);
-            if (unrecoverable) { return getErrorNode(); }
+            if (unrecoverable) {
+                return getErrorNode();
+            }
 
             tokenList.pop(); // break
 
             safePeek(";", TokenType.TSEMI);
-            if (unrecoverable) { return getErrorNode(); }
+            if (unrecoverable) {
+                return getErrorNode();
+            }
 
             tokenList.pop(); // ;
 
@@ -1364,7 +1508,9 @@ public class Parser
         tokenList.pop(); // default
 
         safePeek(":", TokenType.TCOLN);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // :
 
@@ -1382,7 +1528,7 @@ public class Parser
         return asgnstattail(varNode);
     }
 
-        private SyntaxTreeNode asgnstattail(SyntaxTreeNode varNode) {
+    private SyntaxTreeNode asgnstattail(SyntaxTreeNode varNode) {
         TreeNodeType asgnopNode;
         try {
             asgnopNode = asgnop();
@@ -1401,8 +1547,11 @@ public class Parser
 
     // <asgnop> :: == | += | -= | *= | /=
     private TreeNodeType asgnop() {
-        safePeek("Assignment Operator", TokenType.TEQUL, TokenType.TPLEQ, TokenType.TMNEQ, TokenType.TSTEQ, TokenType.TDVEQ);
-        if (unrecoverable) { throw new RuntimeException("Critical error, expected an assignment operator"); }
+        safePeek("Assignment Operator", TokenType.TEQUL, TokenType.TPLEQ, TokenType.TMNEQ, TokenType.TSTEQ,
+                TokenType.TDVEQ);
+        if (unrecoverable) {
+            throw new RuntimeException("Critical error, expected an assignment operator");
+        }
 
         TokenType tokenType = tokenList.pop().getType();
 
@@ -1425,8 +1574,10 @@ public class Parser
     // <iostat> ::= input <vlist> | print <prlist> | printline <prlist>
     private SyntaxTreeNode iostat() {
         safePeek("input, print, or printline", TokenType.TINPT, TokenType.TPRNT, TokenType.TPRLN);
-        if (unrecoverable) { return getErrorNode(); }
-        
+        if (unrecoverable) {
+            return getErrorNode();
+        }
+
         Token peekedToken = tokenList.peek();
         tokenList.pop(); // input, print, or printline
         if (peekedToken.getType() == TokenType.TINPT) {
@@ -1436,7 +1587,8 @@ public class Parser
             return node;
         }
 
-        SyntaxTreeNode node = new SyntaxTreeNode(peekedToken.getType() == TokenType.TPRNT ? TreeNodeType.NPRINT : TreeNodeType.NPRLN);
+        SyntaxTreeNode node = new SyntaxTreeNode(
+                peekedToken.getType() == TokenType.TPRNT ? TreeNodeType.NPRINT : TreeNodeType.NPRLN);
 
         SyntaxTreeNode prlistNode = prlist();
 
@@ -1445,23 +1597,28 @@ public class Parser
         return node;
     }
 
+    // So we never actually end up using this rule since we changed the grammar for
+    // stat to asgnstatorcallstat which handles it
     // <callstat> ::= <id> ( <callstattail>
     private SyntaxTreeNode callstat() {
         safePeek("identifier", TokenType.TIDEN);
-        if (unrecoverable) { return getErrorNode(); }
-
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         Token idToken = tokenList.pop();
 
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
 
         safePeek("(", TokenType.TLPAR);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // (
 
         SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NCALL, idToken, record);
-        
+
         SyntaxTreeNode elistNode = callstattail();
         if (elistNode != null) {
             node.setFirstChild(elistNode);
@@ -1482,19 +1639,24 @@ public class Parser
         SyntaxTreeNode elistNode = elist();
 
         safePeek(")", TokenType.TRPAR);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // )
 
         return elistNode;
     }
 
-    // Note: This is easier to implement as a single function for both production rules
+    // Note: This is easier to implement as a single function for both production
+    // rules
     // <returnstat> ::= return <returnstattail>
     // <returnstattail> ::= void | <expr>
     private SyntaxTreeNode returnstat() {
         safePeek("return", TokenType.TRETN);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // return
 
@@ -1506,6 +1668,7 @@ public class Parser
         }
         return node;
     }
+
     // <vlist> ::= <var> <vlisttail>
     private SyntaxTreeNode vlist() {
         SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NVLIST);
@@ -1516,6 +1679,7 @@ public class Parser
         }
         return node;
     }
+
     // <vlisttail> ::= , <vlisttail> | ε
     private SyntaxTreeNode vlisttail() {
         if (notTypeAtPeek(TokenType.TCOMA)) {
@@ -1530,23 +1694,29 @@ public class Parser
         }
         return node;
     }
+
     // <var> ::= <id><vartail>
     private SyntaxTreeNode var() {
         safePeek("identifier", TokenType.TIDEN);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         Token idToken = tokenList.pop();
         return vartail(idToken);
     }
+
     // <vartail> ::= [<expr>]<vartailtail> | ε
-        private SyntaxTreeNode vartail(Token idToken) {
+    private SyntaxTreeNode vartail(Token idToken) {
         if (typeAtPeek(TokenType.TLBRK)) {
             tokenList.pop(); // [
 
             SyntaxTreeNode exprNode = expr();
 
             safePeek("]", TokenType.TRBRK);
-            if (unrecoverable) { return getErrorNode(); }
+            if (unrecoverable) {
+                return getErrorNode();
+            }
 
             tokenList.pop(); // ]
 
@@ -1557,15 +1727,18 @@ public class Parser
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
         return new SyntaxTreeNode(TreeNodeType.NSIMV, idToken, record);
     }
+
     // <vartailtail> ::= . <id> | ε
-        private SyntaxTreeNode vartailtail(Token idToken, SyntaxTreeNode exprNode) {
+    private SyntaxTreeNode vartailtail(Token idToken, SyntaxTreeNode exprNode) {
         if (typeAtPeek(TokenType.TDOTT)) {
 
             tokenList.pop(); // .
 
             safePeek("identifier", TokenType.TIDEN);
-            if (unrecoverable) { return getErrorNode(); }
-            
+            if (unrecoverable) {
+                return getErrorNode();
+            }
+
             Token endIdToken = tokenList.pop();
 
             SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
@@ -1573,7 +1746,8 @@ public class Parser
             SymbolTableRecord endRecord = currentSymbolTable.getOrCreateToken(endIdToken.getLexeme(), endIdToken);
             currentSymbolTable = currentSymbolTable.getParent();
 
-            // TODO: Not completely sure what children of this node should be? We technically have two ids?
+            // TODO: Not completely sure what children of this node should be? We
+            // technically have two ids?
             SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NARRV, idToken, record);
             node.setFirstChild(exprNode);
             node.setThirdChild(new SyntaxTreeNode(TreeNodeType.NSIMV, endIdToken, endRecord));
@@ -1610,15 +1784,13 @@ public class Parser
         if (typeAtPeek(TokenType.TCOMA)) {
 
             SymbolTableRecord elistRecord = currentSymbolTable.getOrCreateToken(
-                tokenList.peek().getLexeme(), 
-                tokenList.peek()
-            );
+                    tokenList.peek().getLexeme(),
+                    tokenList.peek());
 
             SyntaxTreeNode elistNode = new SyntaxTreeNode(
-                TreeNodeType.NEXPL, 
-                tokenList.pop(), 
-                elistRecord
-            );
+                    TreeNodeType.NEXPL,
+                    tokenList.pop(),
+                    elistRecord);
 
             elistNode.setThirdChild(elist());
             return elistNode;
@@ -1629,25 +1801,22 @@ public class Parser
         }
     }
 
-    
     // NBOOL <bool> ::= not <bool> | <bool> <logop> <rel>
     // Special <bool> ::= <rel>
 
     // <bool> ::= not <bool> | <rel> <boolPrime>
     private SyntaxTreeNode bool() {
         if (typeAtPeek(TokenType.TNOTT)) {
-            
+
             tokenList.pop(); // not
-            
+
             SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
-                tokenList.peek().getLexeme(), 
-                tokenList.peek()
-            );
+                    tokenList.peek().getLexeme(),
+                    tokenList.peek());
             SyntaxTreeNode boolNode = new SyntaxTreeNode(
-                TreeNodeType.NBOOL, 
-                tokenList.pop(), 
-                record
-            );
+                    TreeNodeType.NBOOL,
+                    tokenList.pop(),
+                    record);
             boolNode.setFirstChild(bool());
             return boolNode;
 
@@ -1657,47 +1826,42 @@ public class Parser
             return boolPrime(relNode);
         }
     }
+
     // <boolPrime> ::= <logop> <rel> <boolPrime> | ε
-        private SyntaxTreeNode boolPrime(SyntaxTreeNode leftNode) {
-        if (typeAtPeek(TokenType.TTAND) || 
-            typeAtPeek(TokenType.TTTOR) || 
-            typeAtPeek(TokenType.TTXOR)) {
+    private SyntaxTreeNode boolPrime(SyntaxTreeNode leftNode) {
+        if (typeAtPeek(TokenType.TTAND) ||
+                typeAtPeek(TokenType.TTTOR) ||
+                typeAtPeek(TokenType.TTXOR)) {
 
             SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
-                tokenList.peek().getLexeme(), 
-                tokenList.peek()
-            );
+                    tokenList.peek().getLexeme(),
+                    tokenList.peek());
 
             if (typeAtPeek(TokenType.TTAND)) {
                 SyntaxTreeNode andNode = new SyntaxTreeNode(
-                    TreeNodeType.NAND, 
-                    tokenList.pop(), 
-                    record
-                );
+                        TreeNodeType.NAND,
+                        tokenList.pop(),
+                        record);
 
                 andNode.setFirstChild(leftNode);
                 andNode.setThirdChild(logop());
                 SyntaxTreeNode boolPrimeNode = boolPrime(andNode);
                 return boolPrimeNode;
-            }
-            else if (typeAtPeek(TokenType.TTTOR)) {
+            } else if (typeAtPeek(TokenType.TTTOR)) {
                 SyntaxTreeNode orNode = new SyntaxTreeNode(
-                    TreeNodeType.NOR, 
-                    tokenList.pop(), 
-                    record
-                );
+                        TreeNodeType.NOR,
+                        tokenList.pop(),
+                        record);
 
                 orNode.setFirstChild(leftNode);
                 orNode.setThirdChild(logop());
                 SyntaxTreeNode boolPrimeNode = boolPrime(orNode);
                 return boolPrimeNode;
-            }
-            else {
+            } else {
                 SyntaxTreeNode xorNode = new SyntaxTreeNode(
-                    TreeNodeType.NXOR, 
-                    tokenList.pop(), 
-                    record
-                );
+                        TreeNodeType.NXOR,
+                        tokenList.pop(),
+                        record);
 
                 xorNode.setFirstChild(leftNode);
                 xorNode.setThirdChild(logop());
@@ -1710,7 +1874,6 @@ public class Parser
         }
     }
 
-    
     // Special <rel> ::= <expr> <relop><expr>
     // Special <rel> ::= <expr>
 
@@ -1720,19 +1883,20 @@ public class Parser
         SyntaxTreeNode relNode = expr();
         return reltail(relNode);
     }
-    // <reltail> ::= <relop><expr> | ε
-        private SyntaxTreeNode reltail(SyntaxTreeNode leftNode) {
 
-        if (typeAtPeek(TokenType.TEQEQ) || 
-            typeAtPeek(TokenType.TNEQL) || 
-            typeAtPeek(TokenType.TGRTR) || 
-            typeAtPeek(TokenType.TLEQL) || 
-            typeAtPeek(TokenType.TLESS) || 
-            typeAtPeek(TokenType.TGEQL)) {
+    // <reltail> ::= <relop><expr> | ε
+    private SyntaxTreeNode reltail(SyntaxTreeNode leftNode) {
+
+        if (typeAtPeek(TokenType.TEQEQ) ||
+                typeAtPeek(TokenType.TNEQL) ||
+                typeAtPeek(TokenType.TGRTR) ||
+                typeAtPeek(TokenType.TLEQL) ||
+                typeAtPeek(TokenType.TLESS) ||
+                typeAtPeek(TokenType.TGEQL)) {
 
             SyntaxTreeNode relopNode = relop();
             relopNode.setFirstChild(leftNode);
-            
+
             relopNode.setThirdChild(expr());
             return relopNode;
 
@@ -1749,50 +1913,46 @@ public class Parser
     // <logop> ::= and | or | xor
     private SyntaxTreeNode logop() {
         safePeek("Logical Operator", TokenType.TTAND, TokenType.TTTOR, TokenType.TTXOR);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
         if (typeAtPeek(TokenType.TTAND)) {
 
             // and
             SyntaxTreeNode andNode = new SyntaxTreeNode(
-                TreeNodeType.NAND, 
-                tokenList.pop(), 
-                currentSymbolTable.getOrCreateToken(
-                    tokenList.peek().getLexeme(), 
-                    tokenList.peek()
-                )
-            );
+                    TreeNodeType.NAND,
+                    tokenList.pop(),
+                    currentSymbolTable.getOrCreateToken(
+                            tokenList.peek().getLexeme(),
+                            tokenList.peek()));
             return andNode;
         } else if (typeAtPeek(TokenType.TTTOR)) {
 
             SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
-                tokenList.peek().getLexeme(), 
-                tokenList.peek()
-            );
+                    tokenList.peek().getLexeme(),
+                    tokenList.peek());
 
             // or
             SyntaxTreeNode orNode = new SyntaxTreeNode(
-                TreeNodeType.NOR, 
-                tokenList.pop(), 
-                record
-            );
+                    TreeNodeType.NOR,
+                    tokenList.pop(),
+                    record);
             return orNode;
 
-        } 
+        }
         // else if (typeAtPeek(TokenType.TTXOR))
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
-            tokenList.peek().getLexeme(), 
-            tokenList.peek()
-        );
+                tokenList.peek().getLexeme(),
+                tokenList.peek());
 
         // xor
         SyntaxTreeNode xorNode = new SyntaxTreeNode(
-            TreeNodeType.NXOR, 
-            tokenList.pop(), 
-            record
-        );
+                TreeNodeType.NXOR,
+                tokenList.pop(),
+                record);
         return xorNode;
     }
-    
+
     // NEQL <relop> ::= ==
     // NNEQ <relop> ::= !=
     // NGRT <relop> ::= >
@@ -1802,99 +1962,89 @@ public class Parser
 
     // <relop> ::= == | != | > | <= | < | >=
     private SyntaxTreeNode relop() {
-        safePeek("Relational Operator", TokenType.TEQEQ, TokenType.TNEQL, TokenType.TGRTR, TokenType.TLEQL, TokenType.TLESS, TokenType.TGEQL);
-        if (unrecoverable) { return getErrorNode(); }
+        safePeek("Relational Operator", TokenType.TEQEQ, TokenType.TNEQL, TokenType.TGRTR, TokenType.TLEQL,
+                TokenType.TLESS, TokenType.TGEQL);
+        if (unrecoverable) {
+            return getErrorNode();
+        }
         if (typeAtPeek(TokenType.TEQEQ)) {
 
             SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
-                tokenList.peek().getLexeme(), 
-                tokenList.peek()
-            );
+                    tokenList.peek().getLexeme(),
+                    tokenList.peek());
 
             // ==
             SyntaxTreeNode equalEqualNode = new SyntaxTreeNode(
-                TreeNodeType.NEQL, 
-                tokenList.pop(), 
-                record
-            );
+                    TreeNodeType.NEQL,
+                    tokenList.pop(),
+                    record);
             return equalEqualNode;
 
         } else if (typeAtPeek(TokenType.TNEQL)) {
 
             SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
-                tokenList.peek().getLexeme(), 
-                tokenList.peek()
-            );
+                    tokenList.peek().getLexeme(),
+                    tokenList.peek());
 
             // !=
             SyntaxTreeNode notEqualNode = new SyntaxTreeNode(
-                TreeNodeType.NNEQ, 
-                tokenList.pop(), 
-                record
-            );
+                    TreeNodeType.NNEQ,
+                    tokenList.pop(),
+                    record);
             return notEqualNode;
-            
+
         } else if (typeAtPeek(TokenType.TGRTR)) {
 
             SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
-                tokenList.peek().getLexeme(), 
-                tokenList.peek()
-            );
+                    tokenList.peek().getLexeme(),
+                    tokenList.peek());
 
             // >
             SyntaxTreeNode greaterThanNode = new SyntaxTreeNode(
-                TreeNodeType.NGRT, 
-                tokenList.pop(), 
-                record
-            );
+                    TreeNodeType.NGRT,
+                    tokenList.pop(),
+                    record);
             return greaterThanNode;
 
         } else if (typeAtPeek(TokenType.TLEQL)) {
 
             SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
-                tokenList.peek().getLexeme(), 
-                tokenList.peek()
-            );
+                    tokenList.peek().getLexeme(),
+                    tokenList.peek());
 
             // <=
             SyntaxTreeNode lessThanEqualNode = new SyntaxTreeNode(
-                TreeNodeType.NLEQ, 
-                tokenList.pop(), 
-                record
-            );
+                    TreeNodeType.NLEQ,
+                    tokenList.pop(),
+                    record);
             return lessThanEqualNode;
 
         } else if (typeAtPeek(TokenType.TLESS)) {
 
             SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
-                tokenList.peek().getLexeme(), 
-                tokenList.peek()
-            );
+                    tokenList.peek().getLexeme(),
+                    tokenList.peek());
 
             // <
             SyntaxTreeNode lessThanNode = new SyntaxTreeNode(
-                TreeNodeType.NLSS, 
-                tokenList.pop(), 
-                record
-            );
+                    TreeNodeType.NLSS,
+                    tokenList.pop(),
+                    record);
             return lessThanNode;
 
-        // } else if (typeAtPeek(TokenType.TGEQL)) {
+            // } else if (typeAtPeek(TokenType.TGEQL)) {
         }
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
-            tokenList.peek().getLexeme(), 
-            tokenList.peek()
-        );
+                tokenList.peek().getLexeme(),
+                tokenList.peek());
 
         // >=
         SyntaxTreeNode greaterThanEqualNode = new SyntaxTreeNode(
-            TreeNodeType.NGEQ, 
-            tokenList.pop(), 
-            record
-        );
+                TreeNodeType.NGEQ,
+                tokenList.pop(),
+                record);
         return greaterThanEqualNode;
     }
-
 
     // <expr> ::= <term> <exprtail>
     private SyntaxTreeNode expr() {
@@ -1917,7 +2067,8 @@ public class Parser
             Token expToken = tokenList.pop(); // + or -
 
             SymbolTableRecord record = currentSymbolTable.getOrCreateToken(expToken.getLexeme(), expToken);
-            SyntaxTreeNode node = new SyntaxTreeNode(expToken.getType() == TokenType.TPLUS ? TreeNodeType.NADD : TreeNodeType.NSUB, expToken, record);
+            SyntaxTreeNode node = new SyntaxTreeNode(
+                    expToken.getType() == TokenType.TPLUS ? TreeNodeType.NADD : TreeNodeType.NSUB, expToken, record);
 
             node.setFirstChild(expr());
             return node;
@@ -1927,7 +2078,7 @@ public class Parser
             return null;
         }
     }
-    
+
     // NMUL <term> ::= <term> * <fact>
     // NDIV <term> ::= <term> / <fact>
     // NMOD <term> ::= <term> % <fact>
@@ -1949,22 +2100,18 @@ public class Parser
 
     // <termtail> ::= * <term> | / <term> | % <term> | ε
     private SyntaxTreeNode termtail() {
-        if (typeAtPeek(TokenType.TSTAR) || 
-            typeAtPeek(TokenType.TDIVD) || 
-            typeAtPeek(TokenType.TPERC)) {
+        if (typeAtPeek(TokenType.TSTAR) ||
+                typeAtPeek(TokenType.TDIVD) ||
+                typeAtPeek(TokenType.TPERC)) {
 
             Token expToken = tokenList.pop(); // * or / or %
             SymbolTableRecord record = currentSymbolTable.getOrCreateToken(expToken.getLexeme(), expToken);
 
             SyntaxTreeNode node = new SyntaxTreeNode(
-                expToken.getType() == TokenType.TSTAR ? 
-                    TreeNodeType.NMUL : 
-                    expToken.getType() == TokenType.TDIVD ? 
-                        TreeNodeType.NDIV : 
-                        TreeNodeType.NMOD, 
-                expToken, 
-                record
-            );
+                    expToken.getType() == TokenType.TSTAR ? TreeNodeType.NMUL
+                            : expToken.getType() == TokenType.TDIVD ? TreeNodeType.NDIV : TreeNodeType.NMOD,
+                    expToken,
+                    record);
 
             node.setFirstChild(term());
             return node;
@@ -2016,10 +2163,10 @@ public class Parser
     // NFALS <exponent> ::= false
     // Special <exponent> ::= ( <bool> )
 
-     // <exponent> ::= <exponentNotBool> | <exponentBool>
-     private SyntaxTreeNode exponent() {
+    // <exponent> ::= <exponentNotBool> | <exponentBool>
+    private SyntaxTreeNode exponent() {
         if (typeAtPeek(TokenType.TLPAR)) {
-            
+
             // <exponent> ::= ( <bool> )
             SyntaxTreeNode expBoolNode = exponentBool();
             return expBoolNode;
@@ -2028,11 +2175,9 @@ public class Parser
 
             SyntaxTreeNode expNotBoolNode = exponentNotBool();
             return expNotBoolNode;
-            
+
         }
     }
-
-    
 
     // <exponentNotBool> ::= <var> | <intlit> | <reallit> | <fncall> | true | false
     private SyntaxTreeNode exponentNotBool() {
@@ -2044,16 +2189,14 @@ public class Parser
 
         } else if (typeAtPeek(TokenType.TILIT)) {
             SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
-                tokenList.peek().getLexeme(), 
-                tokenList.peek()
-            );
+                    tokenList.peek().getLexeme(),
+                    tokenList.peek());
 
             // NILIT <exponent> ::= <intlit>
             SyntaxTreeNode intNode = new SyntaxTreeNode(
-                TreeNodeType.NILIT, 
-                tokenList.peek(), 
-                record
-            );
+                    TreeNodeType.NILIT,
+                    tokenList.peek(),
+                    record);
 
             tokenList.pop(); // intlit (int)
 
@@ -2062,36 +2205,30 @@ public class Parser
         } else if (typeAtPeek(TokenType.TFLIT)) {
 
             SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
-                tokenList.peek().getLexeme(), 
-                tokenList.peek()
-            );
+                    tokenList.peek().getLexeme(),
+                    tokenList.peek());
             // NFLIT <exponent> ::= <reallit>
             SyntaxTreeNode floatNode = new SyntaxTreeNode(
-                TreeNodeType.NFLIT, 
-                tokenList.peek(), 
-                record
-            );
+                    TreeNodeType.NFLIT,
+                    tokenList.peek(),
+                    record);
 
             tokenList.pop(); // reallit (float)
 
             return floatNode;
-            
+
         } else if (typeAtPeek(TokenType.TTRUE) || typeAtPeek(TokenType.TFALS)) {
 
             SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
-                tokenList.peek().getLexeme(), 
-                tokenList.peek()
-            );
+                    tokenList.peek().getLexeme(),
+                    tokenList.peek());
 
             // NTRUE <exponent> ::= true
             // NFALS <exponent> ::= false
             SyntaxTreeNode boolNode = new SyntaxTreeNode(
-                tokenList.peek().getType() == TokenType.TTRUE ? 
-                    TreeNodeType.NTRUE : 
-                    TreeNodeType.NFALS, 
-                tokenList.peek(), 
-                record
-            );
+                    tokenList.peek().getType() == TokenType.TTRUE ? TreeNodeType.NTRUE : TreeNodeType.NFALS,
+                    tokenList.peek(),
+                    record);
 
             tokenList.pop(); // true or false
 
@@ -2106,16 +2243,20 @@ public class Parser
     }
 
     // <exponentBool> ::= ( <bool> )
-    public SyntaxTreeNode exponentBool() {    
+    public SyntaxTreeNode exponentBool() {
         safePeek("(", TokenType.TLPAR);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // (
 
         SyntaxTreeNode boolNode = bool();
 
         safePeek(")", TokenType.TRPAR);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // )
 
@@ -2123,18 +2264,21 @@ public class Parser
 
     }
 
-
     // <fncall> ::= <id> ( <fncalltail>
     private SyntaxTreeNode fncall() {
         safePeek("identifier", TokenType.TIDEN);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         Token idToken = tokenList.pop();
 
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
 
         safePeek("(", TokenType.TLPAR);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // (
 
@@ -2159,13 +2303,14 @@ public class Parser
         SyntaxTreeNode elistNode = elist();
 
         safePeek(")", TokenType.TRPAR);
-        if (unrecoverable) { return getErrorNode(); }
+        if (unrecoverable) {
+            return getErrorNode();
+        }
 
         tokenList.pop(); // )
 
         return elistNode;
     }
-    
 
     // <prlist> ::= <printitem> <prlisttail>
     private SyntaxTreeNode prlist() {
@@ -2177,7 +2322,7 @@ public class Parser
         }
         return node;
     }
-    
+
     // <prlisttail> ::= , <prlist> | ε
     private SyntaxTreeNode prlisttail() {
 
@@ -2186,12 +2331,12 @@ public class Parser
         }
 
         tokenList.pop(); // ,
-        
+
         // TODO: This might be increadibly incorrect!
         return prlist();
 
     }
-    
+
     // <printitem> ::= <expr> | <string>
     private SyntaxTreeNode printitem() {
 
@@ -2204,7 +2349,7 @@ public class Parser
         return expr();
     }
 
-    private boolean popTillTokenType(TokenType ... types) {
+    private boolean popTillTokenType(TokenType... types) {
         if (tokenList.isEmpty()) {
             // true means unrecoverable
             return true;
@@ -2218,6 +2363,4 @@ public class Parser
         return false;
     }
 
-
-    
 }

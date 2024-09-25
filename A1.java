@@ -1,9 +1,9 @@
 import java.io.IOException;
 import java.nio.file.Paths;
 
-
 /**
  * Launcher for Scanner + Parser
+ * 
  * @author Edwin Sundberg
  * @author Benjamin Napoli
  */
@@ -13,6 +13,7 @@ public class A1 {
         // i.e. /dev/null/source.txt -> source.txt
         return Paths.get(path).getFileName().toString();
     }
+
     public static void main(String[] args) throws IOException {
         if (args.length == 0) {
             throw new IllegalArgumentException("Source file name is missing");

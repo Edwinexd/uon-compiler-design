@@ -1,5 +1,6 @@
 /**
  * Methods for classifying characters.
+ * 
  * @author Edwin Sundberg
  * @author Benjamin Napoli
  */

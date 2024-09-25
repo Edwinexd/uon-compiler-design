@@ -2,6 +2,7 @@ import java.util.Optional;
 
 /**
  * Represents a token in the source code
+ * 
  * @author Edwin Sundberg
  * @author Benjamin Napoli
  */

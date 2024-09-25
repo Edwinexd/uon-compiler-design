@@ -7,6 +7,7 @@ import java.io.IOException;
 
 /**
  * Scanner for the CD24 language
+ * 
  * @author Edwin Sundberg
  * @author Benjamin Napoli
  */

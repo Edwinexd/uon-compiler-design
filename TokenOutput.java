@@ -3,7 +3,9 @@ import java.io.IOException;
 import java.util.LinkedList;
 
 /**
- * Output handler for the scanner and parser, handles filewriters, inserting newlines etc.
+ * Output handler for the scanner and parser, handles filewriters, inserting
+ * newlines etc.
+ * 
  * @author Edwin Sundberg
  * @author Benjamin Napoli
  */

@@ -3,7 +3,9 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Represents a record in the symbol table. Contains information about the record itself and nested scopes (i.e. functions).
+ * Represents a record in the symbol table. Contains information about the
+ * record itself and nested scopes (i.e. functions).
+ * 
  * @author Edwin Sundberg
  * @author Benjamin Napoli
  */
@@ -54,7 +56,7 @@ public class SymbolTableRecord {
     public int getBase() {
         return base;
     }
-    
+
     // Later use
     public int getOffset() {
         return offset;

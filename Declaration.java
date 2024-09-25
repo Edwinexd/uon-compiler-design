@@ -1,7 +1,9 @@
 import java.util.Optional;
 
 /**
- * Represents a declaration in the symbol table. Everything from an integer to a "instance" of a struct.
+ * Represents a declaration in the symbol table. Everything from an integer to a
+ * "instance" of a struct.
+ * 
  * @author Edwin Sundberg
  * @author Benjamin Napoli
  */
@@ -50,7 +52,8 @@ public class Declaration {
     }
 
     public boolean isPrimitive() {
-        return type == DeclarationType.INT || type == DeclarationType.FLOAT || type == DeclarationType.BOOL || type == DeclarationType.VOID;
+        return type == DeclarationType.INT || type == DeclarationType.FLOAT || type == DeclarationType.BOOL
+                || type == DeclarationType.VOID;
     }
 
     @Override

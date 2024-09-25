@@ -1,5 +1,11 @@
 import java.util.Optional;
 
+/**
+ * Represents a node in the syntax tree.
+ * 
+ * @author Edwin Sundberg
+ * @author Benjamin Napoli
+ */
 public class SyntaxTreeNode {
     private TreeNodeType nodeType;
 

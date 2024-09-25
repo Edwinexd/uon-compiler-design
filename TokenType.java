@@ -11,6 +11,7 @@ class Mappings {
 
 /**
  * Token types in the CD24 language
+ * 
  * @author Edwin Sundberg
  * @author Benjamin Napoli
  */

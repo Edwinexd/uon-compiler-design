@@ -1,5 +1,7 @@
 /**
- * Bare declaration types, used in combination with Declaration.java to represent different types of declarations.
+ * Bare declaration types, used in combination with Declaration.java to
+ * represent different types of declarations.
+ * 
  * @author Edwin Sundberg
  * @author Benjamin Napoli
  */
@@ -11,7 +13,8 @@ public enum DeclarationType {
     STRUCT_TYPE,
     // and this could just be STRUCT i.e. an instance of a struct
     STRUCT,
-    ARRAY_TYPE, // Since this also confuses me, this is the equivilance of typeid in the grammar ...
+    ARRAY_TYPE, // Since this also confuses me, this is the equivilance of typeid in the grammar
+                // ...
     ARRAY,
     ARRAY_CONSTANT,
     INT,
@@ -23,6 +26,6 @@ public enum DeclarationType {
         return this == ARRAY || this == ARRAY_CONSTANT || this == STRUCT;
     }
 
-
-    // if instance struct we need to keep track of the symbol table record that defines the struct
+    // if instance struct we need to keep track of the symbol table record that
+    // defines the struct
 }
