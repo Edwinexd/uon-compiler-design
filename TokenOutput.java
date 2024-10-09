@@ -21,6 +21,7 @@ public class TokenOutput {
     private LinkedList<String> errors = new LinkedList<String>();
     private LinkedList<String> parserErrors = new LinkedList<String>();
     private LinkedList<String> semanticErrors = new LinkedList<String>();
+    private int errorCount = 0;
 
     public void initializeWriters(String errorPath, String tokenPath, String parserTokenPath) {
         try {
@@ -141,11 +142,31 @@ public class TokenOutput {
     }
 
     public void flushParserErrors() {
+        errorCount += parserErrors.size();
         for (String error : parserErrors) {
-            printToListingFile("    " + error);
             printToListingFile(NEWLINE_CHAR);
+            printToListingFile("    " + error);
         }
         parserErrors.clear();
+    }
+
+    public void flushSemanticErrors() {
+        errorCount += semanticErrors.size();
+        for (String error : semanticErrors) {
+            printToListingFile(NEWLINE_CHAR);
+            printToListingFile("    " + error);
+        }
+        parserErrors.clear();
+    }
+
+    public void flushErrorCount() {
+        printToListingFile(NEWLINE_CHAR);
+        if (errorCount == 0) {
+            printToListingFile("    No errors found.");
+        } else {
+            printToListingFile("    " + errorCount + " errors found.");
+        }
+        errorCount = 0;
     }
 
     private void printToListingFile(char character) {

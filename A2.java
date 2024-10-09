@@ -50,6 +50,8 @@ public class A2 {
 
         // Cleanup
         tokenOutput.flushParserErrors();
+        tokenOutput.flushSemanticErrors();
+        tokenOutput.flushErrorCount();
 
         tokenOutput.closeWriters();
 
