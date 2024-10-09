@@ -20,6 +20,7 @@ public class TokenOutput {
     private int currentLine = 1;
     private LinkedList<String> errors = new LinkedList<String>();
     private LinkedList<String> parserErrors = new LinkedList<String>();
+    private LinkedList<String> semanticErrors = new LinkedList<String>();
 
     public void initializeWriters(String errorPath, String tokenPath, String parserTokenPath) {
         try {
@@ -165,5 +166,9 @@ public class TokenOutput {
 
     public void feedParserError(String error) {
         parserErrors.add(error);
+    }
+
+    public void feedSemanticError(String error) {
+        semanticErrors.add(error);
     }
 }

@@ -40,6 +40,7 @@ public class SymbolTable {
     }
 
     public SymbolTableRecord getOrCreateToken(String name, Token token) {
+        // TODO: I think this should call the regular recursive GET and then 
         Optional<SymbolTableRecord> existingRecord = getTokenSelf(name);
         if (existingRecord.isPresent()) {
             return existingRecord.get();

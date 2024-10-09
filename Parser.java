@@ -481,8 +481,8 @@ public class Parser {
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
         SymbolTableRecord typeRecord = currentSymbolTable.getOrCreateToken(typeIdToke.getLexeme(), typeIdToke);
         if (typeRecord.getDeclaration().isPresent() && !record.getDeclaration().get().equals(Declaration.ARRAY_TYPE)) {
-            // TODO Incorrect type
-            throw new RuntimeException("Critical error, expected an array type");
+            tokenOutput.feedSemanticError(String.format("Semantic error - Array declaration type does not match type identifier (line %d, column %d) ",
+                    typeIdToke.getLine(), typeIdToke.getColumn()));
         }
         record.setDeclaration(Declaration.arrayOfType(typeRecord));
         SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NARRD, idToken, record);
@@ -809,7 +809,8 @@ public class Parser {
 
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
         if (record.getDeclaration().isEmpty() || !record.getDeclaration().get().equals(Declaration.PROGRAM)) {
-            // TODO End of main id should be the same as the program id
+            tokenOutput.feedSemanticError(String.format("Semantic error - Main end identifier does not match program identifier (line %d, column %d) ",
+                    idToken.getLine(), idToken.getColumn()));
         }
         SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NMAIN, idToken, record);
         node.setFirstChild(slistNode);
@@ -1430,13 +1431,15 @@ public class Parser {
 
         SyntaxTreeNode node = new SyntaxTreeNode(asgnopNode);
 
+        // TODO: Check that the types are compatible
+
         node.setFirstChild(varNode);
         node.setThirdChild(boolNode);
 
         return node;
     }
 
-    // <asgnop> :: == | += | -= | *= | /=
+    // <asgnop> :: = | += | -= | *= | /=
     private TreeNodeType asgnop() {
         safePeek("Assignment Operator", TokenType.TEQUL, TokenType.TPLEQ, TokenType.TMNEQ, TokenType.TSTEQ,
                 TokenType.TDVEQ);
