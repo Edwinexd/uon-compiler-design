@@ -567,6 +567,22 @@ public class Parser {
         // Exit the function's scope
         currentSymbolTable = currentSymbolTable.getParent();
 
+        // Traverse stats to ensure a return statement is present
+        SyntaxTreeNode current = stats;
+        boolean hasReturn = false;
+        while (current != null) {
+            if (current.getNodeType() == TreeNodeType.NRETN) {
+                hasReturn = true;
+                break;
+            }
+            // the way all nodes are layed out, if there is a return it will be as child 1
+            current = current.getFirstChild().orElse(null);
+        }
+        if (!hasReturn) {
+            tokenOutput.feedSemanticError(String.format("Semantic error - Function %s does not have a return statement (line %d, column %d) ",
+                    idToken.getLexeme(), idToken.getLine(), idToken.getColumn()));
+        }
+
         SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NFUND, idToken, record);
         node.setFirstChild(plistNode);
         node.setSecondChild(locals);
