@@ -2103,6 +2103,7 @@ public class Parser {
             SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
                     tokenList.peek().getLexeme(),
                     tokenList.peek());
+            record.setDeclaration(Declaration.INT);
 
             // NILIT <exponent> ::= <intlit>
             SyntaxTreeNode intNode = new SyntaxTreeNode(
