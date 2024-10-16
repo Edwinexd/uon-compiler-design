@@ -528,8 +528,23 @@ public class Parser {
         }
 
         tokenList.pop(); // (
-        // TODO: Should be part of func parameters + scope
+
+        currentSymbolTable = record.getScope();
+
         SyntaxTreeNode plistNode = plist();
+
+        if (plistNode != null) {
+            // append to arguments of function symbol table record
+            SyntaxTreeNode current = plistNode.getFirstChild().orElse(null);
+            while (current != null) {
+                SymbolTableRecord argument = current.getValueRecord().get();
+                record.addArgument(argument);
+                current = current.getFirstChild().orElse(null);
+            }
+        }
+
+        currentSymbolTable = currentSymbolTable.getParent();
+
         safePeek(")", TokenType.TRPAR);
         if (unrecoverable) {
             return getErrorNode();
