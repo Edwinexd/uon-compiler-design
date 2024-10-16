@@ -657,9 +657,10 @@ public class Parser {
 
     // #region <paramtail> ::= <typeid> | <stypeOrStructid>
     private Declaration paramtail(boolean isConst) {
-        // TODO: This is wrong since stypeOrStructid could be ok...
-        safePeek("Identifier", TokenType.TIDEN);
-        // TODO: This wont work either
+        if (!typeAtPeek(TokenType.TIDEN)) {
+            return stypeOrStructid();
+        }
+
         Token idToken = tokenList.pop();
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
         if (record.getDeclaration().isPresent() && record.getDeclaration().get().equals(Declaration.ARRAY_TYPE)) {
@@ -1597,6 +1598,11 @@ public class Parser {
         }
 
         Token idToken = tokenList.pop();
+        System.out.println("Calling vartail" + idToken);
+        if (idToken.getLexeme().equals("funny")) {
+            throw new RuntimeException("funny");
+        }
+
         return vartail(idToken);
     }
 
@@ -2073,14 +2079,11 @@ public class Parser {
         }
     }
 
-    // <exponentNotBool> ::= <var> | <intlit> | <reallit> | <fncall> | true | false
+    // <exponentNotBool> ::= <intlit> | <reallit> | true | false | <varOrFncall>
     private SyntaxTreeNode exponentNotBool() {
         if (typeAtPeek(TokenType.TIDEN)) {
             // Special <exponent> ::= <var>
-
-            SyntaxTreeNode varNode = var();
-            return varNode;
-
+            return varOrFncall();
         } else if (typeAtPeek(TokenType.TILIT)) {
             SymbolTableRecord record = currentSymbolTable.getOrCreateToken(
                     tokenList.peek().getLexeme(),
@@ -2128,12 +2131,8 @@ public class Parser {
 
             return boolNode;
 
-        } else {
-            // Special <exponent> ::= <fncall>
-            SyntaxTreeNode fncallNode = fncall();
-            return fncallNode;
-
         }
+        throw new RuntimeException("Critical error, unreachable code");
     }
 
     // <exponentBool> ::= ( <bool> )
@@ -2158,8 +2157,8 @@ public class Parser {
 
     }
 
-    // <fncall> ::= <id> ( <fncalltail>
-    private SyntaxTreeNode fncall() {
+    // <varOrFncall> ::= <id> <varOrFncalltail>
+    public SyntaxTreeNode varOrFncall() {
         safePeek("identifier", TokenType.TIDEN);
         if (unrecoverable) {
             return getErrorNode();
@@ -2167,6 +2166,21 @@ public class Parser {
 
         Token idToken = tokenList.pop();
 
+        return varOrFncalltail(idToken);
+    }
+
+    // <varOrFncalltail>::= ( <fncalltail> | <vartail>
+    public SyntaxTreeNode varOrFncalltail(Token idToken) {
+        if (typeAtPeek(TokenType.TLPAR)) {
+            // <varOrFncalltail> ::= ( <fncalltail>
+            return fncall(idToken);
+        }
+        // <varOrFncalltail> ::= <vartail>
+        return vartail(idToken);
+    }
+
+    // <fncall> ::= ( <fncalltail>
+    private SyntaxTreeNode fncall(Token idToken) {
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
 
         safePeek("(", TokenType.TLPAR);
@@ -2181,10 +2195,37 @@ public class Parser {
         SyntaxTreeNode elistNode = fncalltail();
         if (elistNode != null) {
             node.setFirstChild(elistNode);
+            if (record.getArguments().isEmpty()) {
+                // Wrong amount of arguments
+                tokenOutput.feedSemanticError(String.format("Semantic error - wrong amount of arguments for function (line %d, column %d) ", idToken.getLine(), idToken.getColumn()));
+            } else {
+                List<SymbolTableRecord> arguments = record.getArguments().get();
+                SyntaxTreeNode current = elistNode;
+                for (SymbolTableRecord argument : arguments) {
+                    if (current == null) {
+                        // Wrong amount of arguments
+                        tokenOutput.feedSemanticError(String.format("Semantic error - wrong amount of arguments for function (line %d, column %d) ", idToken.getLine(), idToken.getColumn()));
+                        break;
+                    }
+                    if (current.getValueRecord().isPresent() && current.getValueRecord().get().getDeclaration().isPresent()) {
+                        if (!current.getValueRecord().get().getDeclaration().get().equals(argument.getDeclaration().get())) {
+                            // Wrong type of argument
+                            tokenOutput.feedSemanticError(String.format("Semantic error - wrong type of argument for function (line %d, column %d) ", idToken.getLine(), idToken.getColumn()));
+                        }
+                    } else {
+                        // missing symbol table record / missing declaration
+                        tokenOutput.feedSemanticError(String.format("Semantic error - wrong amount of arguments for function (line %d, column %d) ", idToken.getLine(), idToken.getColumn()));
+                    }
+                    if (current.getFirstChild().isPresent()) {
+                        current = current.getFirstChild().get();
+                    } else {
+                        current = null;
+                    }
+                }
+            }
         }
 
         return node;
-
     }
 
     // <fncalltail> ::= <elist> ) | )
