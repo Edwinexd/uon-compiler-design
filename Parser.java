@@ -408,6 +408,11 @@ public class Parser {
             // NTDECL
             outType = TreeNodeType.NTDECL;
         }
+        if (currentSymbolTable.getToken(idToken.getLexeme()).isPresent()) {
+            tokenOutput.feedSemanticError(String.format("Semantic error - Identifier %s already declared (line %d, column %d) ",
+                    idToken.getLexeme(), idToken.getLine(), idToken.getColumn()));
+        }
+
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
         record.setDeclaration(typeDeclaration);
         SyntaxTreeNode node = new SyntaxTreeNode(outType, idToken, record);
@@ -775,6 +780,11 @@ public class Parser {
         tokenList.pop(); // :
 
         Declaration type = decltail();
+        if (currentSymbolTable.getToken(idToken.getLexeme()).isPresent()) {
+            tokenOutput.feedSemanticError(String.format("Semantic error - Identifier %s already declared (line %d, column %d) ",
+                    idToken.getLexeme(), idToken.getLine(), idToken.getColumn()));
+        }
+
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
         record.setDeclaration(type);
         if (type.getType() == DeclarationType.STRUCT) {
