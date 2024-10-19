@@ -195,6 +195,12 @@ public class Parser {
         }
 
         Token idToken = tokenList.pop();
+
+        if (currentSymbolTable.getToken(idToken.getLexeme()).isPresent()) {
+            tokenOutput.feedSemanticError(String.format("Semantic error - Identifier %s already declared (line %d, column %d) ",
+                    idToken.getLexeme(), idToken.getLine(), idToken.getColumn()));
+        }
+
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
         // TODO Check if declarationtype here should be constant or int/float/bool etc.
         record.setDeclaration(Declaration.CONSTANT);
@@ -267,6 +273,11 @@ public class Parser {
         }
 
         Token idToken = tokenList.pop();
+
+        if (currentSymbolTable.getToken(idToken.getLexeme()).isPresent()) {
+            tokenOutput.feedSemanticError(String.format("Semantic error - Identifier %s already declared (line %d, column %d) ",
+                    idToken.getLexeme(), idToken.getLine(), idToken.getColumn()));
+        }
 
         safePeek("def", TokenType.TTDEF);
         if (unrecoverable) {
@@ -470,6 +481,11 @@ public class Parser {
         }
 
         Token idToken = tokenList.pop();
+
+        if (currentSymbolTable.getToken(idToken.getLexeme()).isPresent()) {
+            tokenOutput.feedSemanticError(String.format("Semantic error - Identifier %s already declared (line %d, column %d) ",
+                    idToken.getLexeme(), idToken.getLine(), idToken.getColumn()));
+        }
 
         safePeek(":", TokenType.TCOLN);
         if (unrecoverable) {
