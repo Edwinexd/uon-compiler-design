@@ -540,6 +540,12 @@ public class Parser {
         }
 
         Token idToken = tokenList.pop();
+
+        if (currentSymbolTable.getToken(idToken.getLexeme()).isPresent()) {
+            tokenOutput.feedSemanticError(String.format("Semantic error - Identifier %s already declared (line %d, column %d) ",
+                    idToken.getLexeme(), idToken.getLine(), idToken.getColumn()));
+        }
+
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
         record.setDeclaration(Declaration.FUNCTION);
 
