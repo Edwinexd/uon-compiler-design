@@ -29,7 +29,6 @@ public class SyntaxTreeNode {
         this.valueRecord = valueRecord;
     }
 
-
     public boolean getTypeChecked() {
         return typeChecked;
     }
@@ -37,7 +36,7 @@ public class SyntaxTreeNode {
     public void setTypeChecked() {
         this.typeChecked = true;
     }
-    
+
     public TreeNodeType getNodeType() {
         return nodeType;
     }

@@ -3,7 +3,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
-import java.util.Random;
 
 /**
  * Parser for CD24 language
@@ -511,7 +510,8 @@ public class Parser {
         Token typeIdToke = tokenList.pop();
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
         SymbolTableRecord typeRecord = currentSymbolTable.getOrCreateToken(typeIdToke.getLexeme(), typeIdToke);
-        if (typeRecord.getDeclaration().isPresent() && !typeRecord.getDeclaration().get().equals(Declaration.ARRAY_TYPE)) {
+        if (typeRecord.getDeclaration().isPresent()
+                && !typeRecord.getDeclaration().get().equals(Declaration.ARRAY_TYPE)) {
             tokenOutput.feedSemanticError(String.format(
                     "Semantic error - Array declaration type does not match type identifier (line %d, column %d) ",
                     typeIdToke.getLine(), typeIdToke.getColumn()));
@@ -762,7 +762,7 @@ public class Parser {
         safePeek("begin", TokenType.TBEGN);
         if (unrecoverable) {
             return new SyntaxTreeNode[] { new SyntaxTreeNode(TreeNodeType.NUNDEF),
-                    new SyntaxTreeNode(TreeNodeType.NUNDEF) 
+                    new SyntaxTreeNode(TreeNodeType.NUNDEF)
             };
         }
         tokenList.pop(); // begin
@@ -1731,7 +1731,8 @@ public class Parser {
             Token endIdToken = tokenList.pop();
 
             SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
-            // TODO: We don't have time to debug this further but this record is on the wrong scope!
+            // TODO: We don't have time to debug this further but this record is on the
+            // wrong scope!
             SymbolTable old = currentSymbolTable;
             currentSymbolTable = record.getScope();
             SymbolTableRecord endRecord = currentSymbolTable.getOrCreateToken(endIdToken.getLexeme(), endIdToken);
@@ -1823,7 +1824,7 @@ public class Parser {
         if (typeAtPeek(TokenType.TTAND) ||
                 typeAtPeek(TokenType.TTTOR) ||
                 typeAtPeek(TokenType.TTXOR)) {
-            
+
             SyntaxTreeNode logopNode = logop();
             logopNode.setFirstChild(leftNode);
             logopNode.setThirdChild(rel());
@@ -2496,10 +2497,11 @@ public class Parser {
 
             Optional<Declaration> returnDec = node.getValueRecord().get().getReturnType();
 
-            if (decType.equals(Declaration.INT) || 
-                decType.equals(Declaration.FLOAT) || 
-                (decType.equals(Declaration.FUNCTION) && returnDec.isPresent() && (returnDec.get().equals(Declaration.INT) || returnDec.get().equals(Declaration.FLOAT))))
-            {
+            if (decType.equals(Declaration.INT) ||
+                    decType.equals(Declaration.FLOAT) ||
+                    (decType.equals(Declaration.FUNCTION) && returnDec.isPresent()
+                            && (returnDec.get().equals(Declaration.INT)
+                                    || returnDec.get().equals(Declaration.FLOAT)))) {
                 return node;
             } else {
                 // SEMANTIC ERROR CANNOT BE A WHATEVER IT IS
@@ -2516,7 +2518,8 @@ public class Parser {
             }
         } else { // if bare then just return the type
             if (isNumeric(
-                    (node.getValueRecord().isPresent() && node.getValueRecord().get().getDeclaration().isPresent() ? node.getValueRecord().get().getDeclaration().get()
+                    (node.getValueRecord().isPresent() && node.getValueRecord().get().getDeclaration().isPresent()
+                            ? node.getValueRecord().get().getDeclaration().get()
                             : null))) {
                 return node;
             }
@@ -2635,20 +2638,20 @@ public class Parser {
 
     // #endregion
 
-    
-    
     /*
-    *   // E.x. 1 - variable, need to determine the type of the expression
-        // => Declaration.INTEGER
-        public Declartion getResultingTypeOf(SyntaxTreeNode node) {
-            if no children, u return current 
-            otherwise you take the type of children
-            and if we have int and float => float
-            if we have int and int => int
-        }
-    */
+     * // E.x. 1 - variable, need to determine the type of the expression
+     * // => Declaration.INTEGER
+     * public Declartion getResultingTypeOf(SyntaxTreeNode node) {
+     * if no children, u return current
+     * otherwise you take the type of children
+     * and if we have int and float => float
+     * if we have int and int => int
+     * }
+     */
 
-    // returns null if the types are not the same (this will be caught by the semantic analysis later so probably no need to throw an error here? but the type will be null)
+    // returns null if the types are not the same (this will be caught by the
+    // semantic analysis later so probably no need to throw an error here? but the
+    // type will be null)
     private Declaration getResultingTypeOf(SyntaxTreeNode node) {
         if (node == null) {
             return null;
@@ -2673,7 +2676,7 @@ public class Parser {
                 return null;
             }
             returnType = result.getValueRecord().get().getDeclaration().get();
-        } 
+        }
 
         return returnType;
     }
@@ -2687,10 +2690,12 @@ public class Parser {
             return null;
         }
 
-        SyntaxTreeNode nodeOne = node.getFirstChild().isPresent() ? recursiveTypeCheckDeclaration(node.getFirstChild().get())
+        SyntaxTreeNode nodeOne = node.getFirstChild().isPresent()
+                ? recursiveTypeCheckDeclaration(node.getFirstChild().get())
                 : null;
 
-        SyntaxTreeNode nodeTwo = node.getThirdChild().isPresent() ? recursiveTypeCheckDeclaration(node.getThirdChild().get())
+        SyntaxTreeNode nodeTwo = node.getThirdChild().isPresent()
+                ? recursiveTypeCheckDeclaration(node.getThirdChild().get())
                 : null;
 
         if (nodeOne == null || nodeTwo == null) {
@@ -2714,7 +2719,6 @@ public class Parser {
 
         return nodeOne;
     }
-
 
     private SyntaxTreeNode recursiveTypeCheckDeclaration(SyntaxTreeNode node) {
         if (node == null) {
@@ -2817,7 +2821,5 @@ public class Parser {
             return node;
         }
     }
-
-
 
 }
