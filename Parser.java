@@ -2462,7 +2462,6 @@ public class Parser {
 
         if (typeOne != typeTwo) {
             // SEMANTIC ERROR
-            
             int errorLine = node.getValueRecord().get().getOgToken().getLine();
             int errorColumn = node.getValueRecord().get().getOgToken().getColumn();
             String errorMessage = String.format("Semantic Error - Arithemic operations can only be done on 2 of the same types (line %d, column %d)", 
@@ -2499,7 +2498,7 @@ public class Parser {
             }
             else {
                 // SEMANTIC ERROR CANNOT BE A WHATEVER IT IS
-                
+                // TODO: Since we are not storing the token of the actual operator we don't have an accurate line and column
                 int errorLine = node.getValueRecord().get().getOgToken().getLine();
                 int errorColumn = node.getValueRecord().get().getOgToken().getColumn();
                 String errorMessage = String.format("Semantic Error - Arithemic operations can only be done on numeric types (line %d, column %d)", errorLine, errorColumn);
@@ -2517,9 +2516,9 @@ public class Parser {
                 return node;
             }
             // SEMANTIC ERROR
-            
             int errorLine = node.getValueRecord().get().getOgToken().getLine();
             int errorColumn = node.getValueRecord().get().getOgToken().getColumn();
+            // TODO: Since we are not storing the token of the actual operator we don't have an accurate line and column
             String errorMessage = String.format("Semantic Error - Arithemic operations can only be done on numeric types (line %d, column %d)", errorLine, errorColumn);
             tokenOutput.feedSemanticError(errorMessage);
 
