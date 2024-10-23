@@ -31,6 +31,10 @@ public class CD24Scanner {
         return tokens;
     }
 
+    public boolean hasErrors() {
+        return tokens.stream().anyMatch(t -> t.getType() == TokenType.TUNDF);
+    }
+
     public void scan(String path) throws IOException {
         try (Scanner scanner = new Scanner(new File(path))) {
             scanner.useDelimiter("");

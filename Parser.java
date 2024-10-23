@@ -97,7 +97,7 @@ public class Parser {
         SyntaxTreeNode rootNode = new SyntaxTreeNode(TreeNodeType.NPROG, idToken, record);
 
         // Global
-        if (typeAtPeek(TokenType.TCONS)) {
+        if (typeAtPeek(TokenType.TCONS, TokenType.TTYPD, TokenType.TARRD)) {
             SyntaxTreeNode globals = globals();
             rootNode.setFirstChild(globals);
         }
@@ -760,7 +760,8 @@ public class Parser {
         safePeek("begin", TokenType.TBEGN);
         if (unrecoverable) {
             return new SyntaxTreeNode[] { new SyntaxTreeNode(TreeNodeType.NUNDEF),
-                    new SyntaxTreeNode(TreeNodeType.NUNDEF) };
+                    new SyntaxTreeNode(TreeNodeType.NUNDEF) 
+            };
         }
         tokenList.pop(); // begin
         nodes[1] = stats();

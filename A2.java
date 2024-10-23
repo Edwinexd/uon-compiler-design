@@ -36,6 +36,12 @@ public class A2 {
         // aswell
         System.out.println("\n");
 
+        // We dont proceed to the parser if there are errors
+        if (scanner.hasErrors()) {
+            tokenOutput.closeWriters();
+            return;
+        }
+
         // Create parser
         Parser parser = new Parser(new LinkedList<>(scanner.getTokens()), tokenOutput);
 
