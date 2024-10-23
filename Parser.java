@@ -1,7 +1,9 @@
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Queue;
+import java.util.Random;
 
 /**
  * Parser for CD24 language
@@ -1729,9 +1731,11 @@ public class Parser {
             Token endIdToken = tokenList.pop();
 
             SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
+            // TODO: We don't have time to debug this further but this record is on the wrong scope!
+            SymbolTable old = currentSymbolTable;
             currentSymbolTable = record.getScope();
             SymbolTableRecord endRecord = currentSymbolTable.getOrCreateToken(endIdToken.getLexeme(), endIdToken);
-            currentSymbolTable = currentSymbolTable.getParent();
+            currentSymbolTable = old;
 
             // TODO: Not completely sure what children of this node should be? We
             // technically have two ids?
@@ -2381,6 +2385,9 @@ public class Parser {
     }
 
     private boolean isNumeric(Declaration type) {
+        if (type == null) {
+            return false;
+        }
         return type.equals(Declaration.INT) ||
                 type.equals(Declaration.FLOAT);
     }
@@ -2487,7 +2494,12 @@ public class Parser {
 
             Declaration decType = node.getValueRecord().get().getDeclaration().get();
 
-            if (decType.equals(Declaration.INT) || decType.equals(Declaration.FLOAT) || (decType.equals(Declaration.FUNCTION) && node.getValueRecord().get().getReturnType().get().equals(Declaration.INT) || node.getValueRecord().get().getReturnType().get().equals(Declaration.FLOAT))) {
+            Optional<Declaration> returnDec = node.getValueRecord().get().getReturnType();
+
+            if (decType.equals(Declaration.INT) || 
+                decType.equals(Declaration.FLOAT) || 
+                (decType.equals(Declaration.FUNCTION) && returnDec.isPresent() && (returnDec.get().equals(Declaration.INT) || returnDec.get().equals(Declaration.FLOAT))))
+            {
                 return node;
             } else {
                 // SEMANTIC ERROR CANNOT BE A WHATEVER IT IS
@@ -2504,7 +2516,7 @@ public class Parser {
             }
         } else { // if bare then just return the type
             if (isNumeric(
-                    (node.getValueRecord().isPresent() ? node.getValueRecord().get().getDeclaration().get()
+                    (node.getValueRecord().isPresent() && node.getValueRecord().get().getDeclaration().isPresent() ? node.getValueRecord().get().getDeclaration().get()
                             : null))) {
                 return node;
             }
