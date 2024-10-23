@@ -70,4 +70,9 @@ public class Declaration {
         }
         return false;
     }
+
+    @Override
+    public String toString() {
+        return String.format("Type: %s, Record: %s", type, record);
+    }
 }
