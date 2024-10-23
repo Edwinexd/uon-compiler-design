@@ -2223,13 +2223,16 @@ public class Parser {
         if (elistNode != null) {
             node.setFirstChild(elistNode);
             if (record.getArguments().isEmpty()) {
+                System.out.println("Outcome 1");
                 // Wrong amount of arguments
                 tokenOutput.feedSemanticError(
                         String.format("Semantic error - wrong amount of arguments for function (line %d, column %d) ",
                                 idToken.getLine(), idToken.getColumn()));
             } else {
+                System.out.println("Outcome 2");
                 List<SymbolTableRecord> arguments = record.getArguments().get();
                 SyntaxTreeNode current = elistNode;
+                System.out.println(traverse(current));
                 for (SymbolTableRecord argument : arguments) {
                     if (current == null) {
                         // Wrong amount of arguments
@@ -2247,7 +2250,24 @@ public class Parser {
                                     "Semantic error - wrong type of argument for function (line %d, column %d) ",
                                     idToken.getLine(), idToken.getColumn()));
                         }
+                    // is not simple var is an expression
+                    // E.x. 1 - variable, need to determine the type of the expression
+                    } else if (!current.getNodeType().equals(TreeNodeType.NSIMV)) {
+                        // TODO We did not implement a proper way to traverse a subtree to determine its type so this is 
+                        // impossible to check
+                        // We would need to implement this:
+                        /*
+                        *   // E.x. 1 - variable, need to determine the type of the expression
+                            // => Declaration.INTEGER
+                            public Declartion getResultingTypeOf(SyntaxTreeNode node) {
+                                if no children, u return current 
+                                otherwise you take the type of children
+                                and if we have int and float => float
+                                if we have int and int => int
+                            }
+                         */
                     } else {
+                        System.out.println("Outcome 3");
                         // missing symbol table record / missing declaration
                         tokenOutput.feedSemanticError(String.format(
                                 "Semantic error - wrong amount of arguments for function (line %d, column %d) ",
