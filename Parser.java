@@ -199,8 +199,9 @@ public class Parser {
         Token idToken = tokenList.pop();
 
         if (currentSymbolTable.getToken(idToken.getLexeme()).isPresent()) {
-            tokenOutput.feedSemanticError(String.format("Semantic error - Identifier %s already declared (line %d, column %d) ",
-                    idToken.getLexeme(), idToken.getLine(), idToken.getColumn()));
+            tokenOutput.feedSemanticError(
+                    String.format("Semantic error - Identifier %s already declared (line %d, column %d) ",
+                            idToken.getLexeme(), idToken.getLine(), idToken.getColumn()));
         }
 
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
@@ -277,8 +278,9 @@ public class Parser {
         Token idToken = tokenList.pop();
 
         if (currentSymbolTable.getToken(idToken.getLexeme()).isPresent()) {
-            tokenOutput.feedSemanticError(String.format("Semantic error - Identifier %s already declared (line %d, column %d) ",
-                    idToken.getLexeme(), idToken.getLine(), idToken.getColumn()));
+            tokenOutput.feedSemanticError(
+                    String.format("Semantic error - Identifier %s already declared (line %d, column %d) ",
+                            idToken.getLexeme(), idToken.getLine(), idToken.getColumn()));
         }
 
         safePeek("def", TokenType.TTDEF);
@@ -422,8 +424,9 @@ public class Parser {
             outType = TreeNodeType.NTDECL;
         }
         if (currentSymbolTable.getToken(idToken.getLexeme()).isPresent()) {
-            tokenOutput.feedSemanticError(String.format("Semantic error - Identifier %s already declared (line %d, column %d) ",
-                    idToken.getLexeme(), idToken.getLine(), idToken.getColumn()));
+            tokenOutput.feedSemanticError(
+                    String.format("Semantic error - Identifier %s already declared (line %d, column %d) ",
+                            idToken.getLexeme(), idToken.getLine(), idToken.getColumn()));
         }
 
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
@@ -485,8 +488,9 @@ public class Parser {
         Token idToken = tokenList.pop();
 
         if (currentSymbolTable.getToken(idToken.getLexeme()).isPresent()) {
-            tokenOutput.feedSemanticError(String.format("Semantic error - Identifier %s already declared (line %d, column %d) ",
-                    idToken.getLexeme(), idToken.getLine(), idToken.getColumn()));
+            tokenOutput.feedSemanticError(
+                    String.format("Semantic error - Identifier %s already declared (line %d, column %d) ",
+                            idToken.getLexeme(), idToken.getLine(), idToken.getColumn()));
         }
 
         safePeek(":", TokenType.TCOLN);
@@ -504,7 +508,8 @@ public class Parser {
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
         SymbolTableRecord typeRecord = currentSymbolTable.getOrCreateToken(typeIdToke.getLexeme(), typeIdToke);
         if (typeRecord.getDeclaration().isPresent() && !record.getDeclaration().get().equals(Declaration.ARRAY_TYPE)) {
-            tokenOutput.feedSemanticError(String.format("Semantic error - Array declaration type does not match type identifier (line %d, column %d) ",
+            tokenOutput.feedSemanticError(String.format(
+                    "Semantic error - Array declaration type does not match type identifier (line %d, column %d) ",
                     typeIdToke.getLine(), typeIdToke.getColumn()));
         }
         record.setDeclaration(Declaration.arrayOfType(typeRecord));
@@ -544,8 +549,9 @@ public class Parser {
         Token idToken = tokenList.pop();
 
         if (currentSymbolTable.getToken(idToken.getLexeme()).isPresent()) {
-            tokenOutput.feedSemanticError(String.format("Semantic error - Identifier %s already declared (line %d, column %d) ",
-                    idToken.getLexeme(), idToken.getLine(), idToken.getColumn()));
+            tokenOutput.feedSemanticError(
+                    String.format("Semantic error - Identifier %s already declared (line %d, column %d) ",
+                            idToken.getLexeme(), idToken.getLine(), idToken.getColumn()));
         }
 
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
@@ -608,8 +614,9 @@ public class Parser {
             current = current.getFirstChild().orElse(null);
         }
         if (!hasReturn) {
-            tokenOutput.feedSemanticError(String.format("Semantic error - Function %s does not have a return statement (line %d, column %d) ",
-                    idToken.getLexeme(), idToken.getLine(), idToken.getColumn()));
+            tokenOutput.feedSemanticError(
+                    String.format("Semantic error - Function %s does not have a return statement (line %d, column %d) ",
+                            idToken.getLexeme(), idToken.getLine(), idToken.getColumn()));
         }
 
         SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NFUND, idToken, record);
@@ -805,8 +812,9 @@ public class Parser {
 
         Declaration type = decltail();
         if (currentSymbolTable.getToken(idToken.getLexeme()).isPresent()) {
-            tokenOutput.feedSemanticError(String.format("Semantic error - Identifier %s already declared (line %d, column %d) ",
-                    idToken.getLexeme(), idToken.getLine(), idToken.getColumn()));
+            tokenOutput.feedSemanticError(
+                    String.format("Semantic error - Identifier %s already declared (line %d, column %d) ",
+                            idToken.getLexeme(), idToken.getLine(), idToken.getColumn()));
         }
 
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
@@ -875,7 +883,8 @@ public class Parser {
 
         SymbolTableRecord record = currentSymbolTable.getOrCreateToken(idToken.getLexeme(), idToken);
         if (record.getDeclaration().isEmpty() || !record.getDeclaration().get().equals(Declaration.PROGRAM)) {
-            tokenOutput.feedSemanticError(String.format("Semantic error - Main end identifier does not match program identifier (line %d, column %d) ",
+            tokenOutput.feedSemanticError(String.format(
+                    "Semantic error - Main end identifier does not match program identifier (line %d, column %d) ",
                     idToken.getLine(), idToken.getColumn()));
         }
         SyntaxTreeNode node = new SyntaxTreeNode(TreeNodeType.NMAIN, idToken, record);
@@ -2263,24 +2272,34 @@ public class Parser {
             node.setFirstChild(elistNode);
             if (record.getArguments().isEmpty()) {
                 // Wrong amount of arguments
-                tokenOutput.feedSemanticError(String.format("Semantic error - wrong amount of arguments for function (line %d, column %d) ", idToken.getLine(), idToken.getColumn()));
+                tokenOutput.feedSemanticError(
+                        String.format("Semantic error - wrong amount of arguments for function (line %d, column %d) ",
+                                idToken.getLine(), idToken.getColumn()));
             } else {
                 List<SymbolTableRecord> arguments = record.getArguments().get();
                 SyntaxTreeNode current = elistNode;
                 for (SymbolTableRecord argument : arguments) {
                     if (current == null) {
                         // Wrong amount of arguments
-                        tokenOutput.feedSemanticError(String.format("Semantic error - wrong amount of arguments for function (line %d, column %d) ", idToken.getLine(), idToken.getColumn()));
+                        tokenOutput.feedSemanticError(String.format(
+                                "Semantic error - wrong amount of arguments for function (line %d, column %d) ",
+                                idToken.getLine(), idToken.getColumn()));
                         break;
                     }
-                    if (current.getValueRecord().isPresent() && current.getValueRecord().get().getDeclaration().isPresent()) {
-                        if (!current.getValueRecord().get().getDeclaration().get().equals(argument.getDeclaration().get())) {
+                    if (current.getValueRecord().isPresent()
+                            && current.getValueRecord().get().getDeclaration().isPresent()) {
+                        if (!current.getValueRecord().get().getDeclaration().get()
+                                .equals(argument.getDeclaration().get())) {
                             // Wrong type of argument
-                            tokenOutput.feedSemanticError(String.format("Semantic error - wrong type of argument for function (line %d, column %d) ", idToken.getLine(), idToken.getColumn()));
+                            tokenOutput.feedSemanticError(String.format(
+                                    "Semantic error - wrong type of argument for function (line %d, column %d) ",
+                                    idToken.getLine(), idToken.getColumn()));
                         }
                     } else {
                         // missing symbol table record / missing declaration
-                        tokenOutput.feedSemanticError(String.format("Semantic error - wrong amount of arguments for function (line %d, column %d) ", idToken.getLine(), idToken.getColumn()));
+                        tokenOutput.feedSemanticError(String.format(
+                                "Semantic error - wrong amount of arguments for function (line %d, column %d) ",
+                                idToken.getLine(), idToken.getColumn()));
                     }
                     if (current.getFirstChild().isPresent()) {
                         current = current.getFirstChild().get();
@@ -2364,43 +2383,43 @@ public class Parser {
         return false;
     }
 
-
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // SEMANTIC ANALYSIS TINGS
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    //#region SEMANTIC ANALYSIS TINGS
+    // #region SEMANTIC ANALYSIS TINGS
 
     private boolean typeIsOperator(TreeNodeType type) {
-        return type == TreeNodeType.NEQL || 
-            type == TreeNodeType.NNEQ || 
-            type == TreeNodeType.NGRT || 
-            type == TreeNodeType.NLSS || 
-            type == TreeNodeType.NLEQ || 
-            type == TreeNodeType.NGEQ || 
-            type == TreeNodeType.NADD || 
-            type == TreeNodeType.NSUB || 
-            type == TreeNodeType.NMUL ||
-            type == TreeNodeType.NDIV ||
-            type == TreeNodeType.NMOD ||
-            type == TreeNodeType.NPOW;
+        return type == TreeNodeType.NEQL ||
+                type == TreeNodeType.NNEQ ||
+                type == TreeNodeType.NGRT ||
+                type == TreeNodeType.NLSS ||
+                type == TreeNodeType.NLEQ ||
+                type == TreeNodeType.NGEQ ||
+                type == TreeNodeType.NADD ||
+                type == TreeNodeType.NSUB ||
+                type == TreeNodeType.NMUL ||
+                type == TreeNodeType.NDIV ||
+                type == TreeNodeType.NMOD ||
+                type == TreeNodeType.NPOW;
     }
 
     private boolean typeIsBooleanOperator(TreeNodeType type) {
-        return type == TreeNodeType.NAND || 
-            type == TreeNodeType.NOR || 
-            type == TreeNodeType.NXOR;
+        return type == TreeNodeType.NAND ||
+                type == TreeNodeType.NOR ||
+                type == TreeNodeType.NXOR;
     }
 
     private boolean isNumeric(DeclarationType type) {
-        return type == DeclarationType.INT || 
-        type == DeclarationType.FLOAT;
+        return type == DeclarationType.INT ||
+                type == DeclarationType.FLOAT;
     }
-    
-    // pre order travesal only as it sets checked, the idea of this is to check it at the highest point and prevent the same operator from being checked multiple times
+
+    // pre order travesal only as it sets checked, the idea of this is to check it
+    // at the highest point and prevent the same operator from being checked
+    // multiple times
     // when moving forn the pre order ;)
-    private void typeCheck(SyntaxTreeNode node) 
-    {
+    private void typeCheck(SyntaxTreeNode node) {
         if (node == null) {
             return;
         }
@@ -2411,12 +2430,12 @@ public class Parser {
         if (typeIsOperator(type)) {
             recursiveOperatorTypeCheck(node);
         }
-        // bool operators 
+        // bool operators
         else if (typeIsBooleanOperator(type)) {
             recursiveBooleanOperatorTypeCheck(node);
-        }
-        else if (type == TreeNodeType.NINIT) {
-            // TODO: Check if the type of the left and right are the same without the other shit because this is an assignment
+        } else if (type == TreeNodeType.NINIT) {
+            // TODO: Check if the type of the left and right are the same without the other
+            // shit because this is an assignment
             // i think this has to do with the real variables and real arrays
         }
 
@@ -2424,7 +2443,8 @@ public class Parser {
 
     }
 
-    // basically it starts at the first operator then recursively checks the children to
+    // basically it starts at the first operator then recursively checks the
+    // children to
     // ensure that they are the same type, if not a semantic error is thrown
 
     private SyntaxTreeNode recursiveOperatorTypeCheck(SyntaxTreeNode node) {
@@ -2432,8 +2452,7 @@ public class Parser {
             return null;
         }
 
-        if (!node.getValueRecord().isPresent())
-        {
+        if (!node.getValueRecord().isPresent()) {
             return null;
         }
 
@@ -2441,11 +2460,14 @@ public class Parser {
             return null;
         }
 
-        SyntaxTreeNode nodeOne = node.getFirstChild().isPresent() ? recursiveTypeCheck(node.getFirstChild().get()) : null;
+        SyntaxTreeNode nodeOne = node.getFirstChild().isPresent() ? recursiveTypeCheck(node.getFirstChild().get())
+                : null;
 
-        SyntaxTreeNode nodeTwo = node.getThirdChild().isPresent() ? recursiveTypeCheck(node.getThirdChild().get()) : null;
+        SyntaxTreeNode nodeTwo = node.getThirdChild().isPresent() ? recursiveTypeCheck(node.getThirdChild().get())
+                : null;
 
-        node.setTypeChecked(); // so that the pre order traversal does not re check an operator that has already been checked
+        node.setTypeChecked(); // so that the pre order traversal does not re check an operator that has
+                               // already been checked
 
         if (nodeOne == null || nodeTwo == null) {
             return null;
@@ -2453,7 +2475,8 @@ public class Parser {
         if (!nodeOne.getValueRecord().isPresent() || !nodeTwo.getValueRecord().isPresent()) {
             return null;
         }
-        if (!nodeOne.getValueRecord().get().getDeclaration().isPresent() || !nodeTwo.getValueRecord().get().getDeclaration().isPresent()) {
+        if (!nodeOne.getValueRecord().get().getDeclaration().isPresent()
+                || !nodeTwo.getValueRecord().get().getDeclaration().isPresent()) {
             return null;
         }
 
@@ -2464,9 +2487,10 @@ public class Parser {
             // SEMANTIC ERROR
             int errorLine = node.getValueRecord().get().getOgToken().getLine();
             int errorColumn = node.getValueRecord().get().getOgToken().getColumn();
-            String errorMessage = String.format("Semantic Error - Arithemic operations can only be done on 2 of the same types (line %d, column %d)", 
-            errorLine, 
-            errorColumn);
+            String errorMessage = String.format(
+                    "Semantic Error - Arithemic operations can only be done on 2 of the same types (line %d, column %d)",
+                    errorLine,
+                    errorColumn);
             tokenOutput.feedSemanticError(errorMessage);
 
             return null;
@@ -2488,38 +2512,40 @@ public class Parser {
 
             return recursiveOperatorTypeCheck(node);
 
-        }
-        else if (tokenType == TokenType.TIDEN) { // if it is an identifier then check then convert the type to token type
+        } else if (tokenType == TokenType.TIDEN) { // if it is an identifier then check then convert the type to token
+                                                   // type
 
             DeclarationType decType = node.getValueRecord().get().getDeclaration().get().getType();
 
             if (decType == DeclarationType.INT || decType == DeclarationType.FLOAT) {
                 return node;
-            }
-            else {
+            } else {
                 // SEMANTIC ERROR CANNOT BE A WHATEVER IT IS
-                // TODO: Since we are not storing the token of the actual operator we don't have an accurate line and column
+                // TODO: Since we are not storing the token of the actual operator we don't have
+                // an accurate line and column
                 int errorLine = node.getValueRecord().get().getOgToken().getLine();
                 int errorColumn = node.getValueRecord().get().getOgToken().getColumn();
-                String errorMessage = String.format("Semantic Error - Arithemic operations can only be done on numeric types (line %d, column %d)", errorLine, errorColumn);
+                String errorMessage = String.format(
+                        "Semantic Error - Arithemic operations can only be done on numeric types (line %d, column %d)",
+                        errorLine, errorColumn);
                 tokenOutput.feedSemanticError(errorMessage);
 
                 return null;
             }
-        }
-        else { // if bare then just return the type
-            if (isNumeric((node.getValueRecord().isPresent() ?
-                node.getValueRecord().get().getDeclaration().get().getType()
-                :
-                null)
-            )) {
+        } else { // if bare then just return the type
+            if (isNumeric(
+                    (node.getValueRecord().isPresent() ? node.getValueRecord().get().getDeclaration().get().getType()
+                            : null))) {
                 return node;
             }
             // SEMANTIC ERROR
             int errorLine = node.getValueRecord().get().getOgToken().getLine();
             int errorColumn = node.getValueRecord().get().getOgToken().getColumn();
-            // TODO: Since we are not storing the token of the actual operator we don't have an accurate line and column
-            String errorMessage = String.format("Semantic Error - Arithemic operations can only be done on numeric types (line %d, column %d)", errorLine, errorColumn);
+            // TODO: Since we are not storing the token of the actual operator we don't have
+            // an accurate line and column
+            String errorMessage = String.format(
+                    "Semantic Error - Arithemic operations can only be done on numeric types (line %d, column %d)",
+                    errorLine, errorColumn);
             tokenOutput.feedSemanticError(errorMessage);
 
             return null;
@@ -2537,19 +2563,25 @@ public class Parser {
             return null;
         }
 
-        SyntaxTreeNode nodeOne = node.getFirstChild().isPresent() ? recursiveBooleanTypeCheck(node.getFirstChild().get()) : null;
+        SyntaxTreeNode nodeOne = node.getFirstChild().isPresent()
+                ? recursiveBooleanTypeCheck(node.getFirstChild().get())
+                : null;
 
-        SyntaxTreeNode nodeTwo = node.getThirdChild().isPresent() ? recursiveBooleanTypeCheck(node.getThirdChild().get()) : null;
+        SyntaxTreeNode nodeTwo = node.getThirdChild().isPresent()
+                ? recursiveBooleanTypeCheck(node.getThirdChild().get())
+                : null;
 
-        node.setTypeChecked(); // so that the pre order traversal does not re check an operator that has already been checked
-        
+        node.setTypeChecked(); // so that the pre order traversal does not re check an operator that has
+                               // already been checked
+
         if (nodeOne == null || nodeTwo == null) {
             return null;
         }
         if (!nodeOne.getValueRecord().isPresent() || !nodeTwo.getValueRecord().isPresent()) {
             return null;
         }
-        if (!nodeOne.getValueRecord().get().getDeclaration().isPresent() || !nodeTwo.getValueRecord().get().getDeclaration().isPresent()) {
+        if (!nodeOne.getValueRecord().get().getDeclaration().isPresent()
+                || !nodeTwo.getValueRecord().get().getDeclaration().isPresent()) {
             return null;
         }
 
@@ -2559,18 +2591,21 @@ public class Parser {
         if (typeOne != DeclarationType.BOOL || typeTwo != DeclarationType.BOOL) {
             if (typeOne != DeclarationType.BOOL) {
                 // SEMANTIC ERROR
-                
+
                 var errorLine = node.getValueRecord().get().getOgToken().getLine();
                 var errorColumn = node.getValueRecord().get().getOgToken().getColumn();
-                String errorMessage = String.format("Semantic Error - Boolean operations can only be done on boolean types (line %d, column %d)", errorLine, errorColumn);
+                String errorMessage = String.format(
+                        "Semantic Error - Boolean operations can only be done on boolean types (line %d, column %d)",
+                        errorLine, errorColumn);
                 tokenOutput.feedSemanticError(errorMessage);
-            }
-            else if (typeTwo != DeclarationType.BOOL) {
+            } else if (typeTwo != DeclarationType.BOOL) {
                 // SEMANTIC ERROR
-                
+
                 var errorLine = node.getValueRecord().get().getOgToken().getLine();
                 var errorColumn = node.getValueRecord().get().getOgToken().getColumn();
-                String errorMessage = String.format("Semantic Error - Boolean operations can only be done on boolean types (line %d, column %d)", errorLine, errorColumn);
+                String errorMessage = String.format(
+                        "Semantic Error - Boolean operations can only be done on boolean types (line %d, column %d)",
+                        errorLine, errorColumn);
                 tokenOutput.feedSemanticError(errorMessage);
             }
             return null;
@@ -2592,30 +2627,30 @@ public class Parser {
 
             return recursiveBooleanOperatorTypeCheck(node);
 
-        }
-        else if (tokenType == TokenType.TIDEN) { // if it is an identifier then check then convert the type to token type
+        } else if (tokenType == TokenType.TIDEN) { // if it is an identifier then check then convert the type to token
+                                                   // type
 
             var decType = node.getValueRecord().get().getDeclaration().get().getType();
 
             if (decType == DeclarationType.BOOL) {
                 return node;
-            }
-            else {
+            } else {
                 // SEMANTIC ERROR CANNOT BE A WHATEVER IT IS
-                
+
                 var errorLine = node.getValueRecord().get().getOgToken().getLine();
                 var errorColumn = node.getValueRecord().get().getOgToken().getColumn();
-                String errorMessage = String.format("Semantic Error - Boolean operations can only be done on boolean types (line %d, column %d)", errorLine, errorColumn);
+                String errorMessage = String.format(
+                        "Semantic Error - Boolean operations can only be done on boolean types (line %d, column %d)",
+                        errorLine, errorColumn);
                 tokenOutput.feedSemanticError(errorMessage);
 
                 return null;
             }
-        }
-        else { // if bare then just return the type
+        } else { // if bare then just return the type
             return node;
         }
     }
 
-    //#endregion
+    // #endregion
 
 }
