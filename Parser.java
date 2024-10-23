@@ -1,6 +1,7 @@
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 
 /**
  * Parser for CD24 language
@@ -604,15 +605,25 @@ public class Parser {
         currentSymbolTable = currentSymbolTable.getParent();
 
         // Traverse stats to ensure a return statement is present
-        SyntaxTreeNode current = stats;
+        Queue<SyntaxTreeNode> queue = new LinkedList<>();
+        queue.add(stats);
         boolean hasReturn = false;
-        while (current != null) {
+        while (!queue.isEmpty()) {
+            SyntaxTreeNode current = queue.poll();
             if (current.getNodeType() == TreeNodeType.NRETN) {
                 hasReturn = true;
                 break;
             }
-            // the way all nodes are layed out, if there is a return it will be as child 1
-            current = current.getFirstChild().orElse(null);
+            // check all of the present children
+            if (current.getFirstChild().isPresent()) {
+                queue.add(current.getFirstChild().get());
+            }
+            if (current.getSecondChild().isPresent()) {
+                queue.add(current.getSecondChild().get());
+            }
+            if (current.getThirdChild().isPresent()) {
+                queue.add(current.getThirdChild().get());
+            }
         }
         if (!hasReturn) {
             tokenOutput.feedSemanticError(
@@ -2487,9 +2498,9 @@ public class Parser {
         } else if (tokenType == TokenType.TIDEN) { // if it is an identifier then check then convert the type to token
                                                    // type
 
-            DeclarationType decType = node.getValueRecord().get().getDeclaration().get().getType();
+            Declaration dec = node.getValueRecord().get().getDeclaration().get();
 
-            if (decType == DeclarationType.INT || decType == DeclarationType.FLOAT) {
+            if (dec.equals(Declaration.INT) || dec.equals(Declaration.FLOAT) || (dec.equals(Declaration.FUNCTION) && node.getValueRecord().get().getReturnType().get().equals(Declaration.INT) || node.getValueRecord().get().getReturnType().get().equals(Declaration.FLOAT))) {
                 return node;
             } else {
                 // SEMANTIC ERROR CANNOT BE A WHATEVER IT IS
