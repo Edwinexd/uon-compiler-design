@@ -2394,9 +2394,9 @@ public class Parser {
                 type == TreeNodeType.NXOR;
     }
 
-    private boolean isNumeric(DeclarationType type) {
-        return type == DeclarationType.INT ||
-                type == DeclarationType.FLOAT;
+    private boolean isNumeric(Declaration type) {
+        return type.equals(Declaration.INT) ||
+                type.equals(Declaration.FLOAT);
     }
 
     // pre order travesal only as it sets checked, the idea of this is to check it
@@ -2464,10 +2464,10 @@ public class Parser {
             return null;
         }
 
-        DeclarationType typeOne = nodeOne.getValueRecord().get().getDeclaration().get().getType();
-        DeclarationType typeTwo = nodeTwo.getValueRecord().get().getDeclaration().get().getType();
+        Declaration typeOne = nodeOne.getValueRecord().get().getDeclaration().get();
+        Declaration typeTwo = nodeTwo.getValueRecord().get().getDeclaration().get();
 
-        if (typeOne != typeTwo) {
+        if (!typeOne.equals(typeTwo)) {
             // SEMANTIC ERROR
             int errorLine = node.getValueRecord().get().getOgToken().getLine();
             int errorColumn = node.getValueRecord().get().getOgToken().getColumn();
@@ -2499,9 +2499,9 @@ public class Parser {
         } else if (tokenType == TokenType.TIDEN) { // if it is an identifier then check then convert the type to token
                                                    // type
 
-            Declaration dec = node.getValueRecord().get().getDeclaration().get();
+            Declaration decType = node.getValueRecord().get().getDeclaration().get();
 
-            if (dec.equals(Declaration.INT) || dec.equals(Declaration.FLOAT) || (dec.equals(Declaration.FUNCTION) && node.getValueRecord().get().getReturnType().get().equals(Declaration.INT) || node.getValueRecord().get().getReturnType().get().equals(Declaration.FLOAT))) {
+            if (decType.equals(Declaration.INT) || decType.equals(Declaration.FLOAT) || (decType.equals(Declaration.FUNCTION) && node.getValueRecord().get().getReturnType().get().equals(Declaration.INT) || node.getValueRecord().get().getReturnType().get().equals(Declaration.FLOAT))) {
                 return node;
             } else {
                 // SEMANTIC ERROR CANNOT BE A WHATEVER IT IS
@@ -2518,7 +2518,7 @@ public class Parser {
             }
         } else { // if bare then just return the type
             if (isNumeric(
-                    (node.getValueRecord().isPresent() ? node.getValueRecord().get().getDeclaration().get().getType()
+                    (node.getValueRecord().isPresent() ? node.getValueRecord().get().getDeclaration().get()
                             : null))) {
                 return node;
             }
@@ -2569,11 +2569,11 @@ public class Parser {
             return null;
         }
 
-        DeclarationType typeOne = nodeOne.getValueRecord().get().getDeclaration().get().getType();
-        DeclarationType typeTwo = nodeTwo.getValueRecord().get().getDeclaration().get().getType();
+        Declaration typeOne = nodeOne.getValueRecord().get().getDeclaration().get();
+        Declaration typeTwo = nodeTwo.getValueRecord().get().getDeclaration().get();
 
-        if (typeOne != DeclarationType.BOOL || typeTwo != DeclarationType.BOOL) {
-            if (typeOne != DeclarationType.BOOL) {
+        if (!typeOne.equals(Declaration.BOOL) || !typeTwo.equals(Declaration.BOOL)) {
+            if (!typeOne.equals(Declaration.BOOL)) {
                 // SEMANTIC ERROR
 
                 var errorLine = node.getValueRecord().get().getOgToken().getLine();
@@ -2582,7 +2582,7 @@ public class Parser {
                         "Semantic Error - Boolean operations can only be done on boolean types (line %d, column %d)",
                         errorLine, errorColumn);
                 tokenOutput.feedSemanticError(errorMessage);
-            } else if (typeTwo != DeclarationType.BOOL) {
+            } else if (!typeTwo.equals(Declaration.BOOL)) {
                 // SEMANTIC ERROR
 
                 var errorLine = node.getValueRecord().get().getOgToken().getLine();
@@ -2614,9 +2614,9 @@ public class Parser {
         } else if (tokenType == TokenType.TIDEN) { // if it is an identifier then check then convert the type to token
                                                    // type
 
-            var decType = node.getValueRecord().get().getDeclaration().get().getType();
+            var decType = node.getValueRecord().get().getDeclaration().get();
 
-            if (decType == DeclarationType.BOOL) {
+            if (decType.equals(Declaration.BOOL)) {
                 return node;
             } else {
                 // SEMANTIC ERROR CANNOT BE A WHATEVER IT IS
@@ -2636,5 +2636,190 @@ public class Parser {
     }
 
     // #endregion
+
+    
+    
+    /*
+    *   // E.x. 1 - variable, need to determine the type of the expression
+        // => Declaration.INTEGER
+        public Declartion getResultingTypeOf(SyntaxTreeNode node) {
+            if no children, u return current 
+            otherwise you take the type of children
+            and if we have int and float => float
+            if we have int and int => int
+        }
+    */
+
+    // returns null if the types are not the same (this will be caught by the semantic analysis later so probably no need to throw an error here? but the type will be null)
+    private Declaration getResultingTypeOf(SyntaxTreeNode node) {
+        if (node == null) {
+            return null;
+        }
+
+        var type = node.getNodeType();
+
+        Declaration returnType = null;
+
+        // Arithmitic operators
+        if (typeIsOperator(type)) {
+            var result = recursiveOperatorTypeCheckDeclaration(node);
+            if (result == null) {
+                return null;
+            }
+            returnType = result.getValueRecord().get().getDeclaration().get();
+        }
+        // bool operators
+        else if (typeIsBooleanOperator(type)) {
+            var result = recursiveBooleanOperatorTypeCheckDeclaration(node);
+            if (result == null) {
+                return null;
+            }
+            returnType = result.getValueRecord().get().getDeclaration().get();
+        } 
+
+        return returnType;
+    }
+
+    private SyntaxTreeNode recursiveOperatorTypeCheckDeclaration(SyntaxTreeNode node) {
+        if (node == null) {
+            return null;
+        }
+
+        if (!node.getValueRecord().isPresent()) {
+            return null;
+        }
+
+        SyntaxTreeNode nodeOne = node.getFirstChild().isPresent() ? recursiveTypeCheckDeclaration(node.getFirstChild().get())
+                : null;
+
+        SyntaxTreeNode nodeTwo = node.getThirdChild().isPresent() ? recursiveTypeCheckDeclaration(node.getThirdChild().get())
+                : null;
+
+        if (nodeOne == null || nodeTwo == null) {
+            return null;
+        }
+        if (!nodeOne.getValueRecord().isPresent() || !nodeTwo.getValueRecord().isPresent()) {
+            return null;
+        }
+        if (!nodeOne.getValueRecord().get().getDeclaration().isPresent()
+                || !nodeTwo.getValueRecord().get().getDeclaration().isPresent()) {
+            return null;
+        }
+
+        Declaration typeOne = nodeOne.getValueRecord().get().getDeclaration().get();
+        Declaration typeTwo = nodeTwo.getValueRecord().get().getDeclaration().get();
+
+        if (!typeOne.equals(typeTwo)) {
+
+            return null;
+        }
+
+        return nodeOne;
+    }
+
+
+    private SyntaxTreeNode recursiveTypeCheckDeclaration(SyntaxTreeNode node) {
+        if (node == null) {
+            return null;
+        }
+
+        TreeNodeType type = node.getNodeType();
+        TokenType tokenType = node.getValueRecord().isPresent() ? node.getValueRecord().get().getType() : null;
+
+        if (typeIsOperator(type)) { // if it is an operator then recursive operator
+
+            return recursiveOperatorTypeCheck(node);
+
+        } else if (tokenType == TokenType.TIDEN) { // if it is an identifier then check then convert the type to token
+                                                   // type
+
+            Declaration decType = node.getValueRecord().get().getDeclaration().get();
+
+            if (decType.equals(Declaration.INT) || decType.equals(Declaration.FLOAT)) {
+                return node;
+            } else {
+
+                return null;
+            }
+        } else { // if bare then just return the type
+            if (isNumeric(
+                    (node.getValueRecord().isPresent() ? node.getValueRecord().get().getDeclaration().get()
+                            : null))) {
+                return node;
+            }
+
+            return null;
+        }
+    }
+
+    // same as above except for boolean operators
+    private SyntaxTreeNode recursiveBooleanOperatorTypeCheckDeclaration(SyntaxTreeNode node) {
+
+        if (node == null) {
+            return null;
+        }
+
+        SyntaxTreeNode nodeOne = node.getFirstChild().isPresent()
+                ? recursiveBooleanTypeCheckDeclaration(node.getFirstChild().get())
+                : null;
+
+        SyntaxTreeNode nodeTwo = node.getThirdChild().isPresent()
+                ? recursiveBooleanTypeCheckDeclaration(node.getThirdChild().get())
+                : null;
+
+        if (nodeOne == null || nodeTwo == null) {
+            return null;
+        }
+        if (!nodeOne.getValueRecord().isPresent() || !nodeTwo.getValueRecord().isPresent()) {
+            return null;
+        }
+        if (!nodeOne.getValueRecord().get().getDeclaration().isPresent()
+                || !nodeTwo.getValueRecord().get().getDeclaration().isPresent()) {
+            return null;
+        }
+
+        Declaration typeOne = nodeOne.getValueRecord().get().getDeclaration().get();
+        Declaration typeTwo = nodeTwo.getValueRecord().get().getDeclaration().get();
+
+        if (!typeOne.equals(Declaration.BOOL) || !typeTwo.equals(Declaration.BOOL)) {
+            if (!typeOne.equals(Declaration.BOOL)) {
+            } else if (!typeTwo.equals(Declaration.BOOL)) {
+            }
+            return null;
+        }
+
+        return nodeOne;
+
+    }
+
+    private SyntaxTreeNode recursiveBooleanTypeCheckDeclaration(SyntaxTreeNode node) {
+        if (node == null) {
+            return null;
+        }
+
+        TreeNodeType type = node.getNodeType();
+        TokenType tokenType = node.getValueRecord().isPresent() ? node.getValueRecord().get().getType() : null;
+
+        if (typeIsBooleanOperator(type)) { // if it is an operator then recursive operator
+
+            return recursiveBooleanOperatorTypeCheck(node);
+
+        } else if (tokenType == TokenType.TIDEN) { // if it is an identifier then check then convert the type to token
+                                                   // type
+
+            var decType = node.getValueRecord().get().getDeclaration().get();
+
+            if (decType.equals(Declaration.BOOL)) {
+                return node;
+            } else {
+
+                return null;
+            }
+        } else { // if bare then just return the type
+            return node;
+        }
+    }
+
+
 
 }
