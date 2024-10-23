@@ -17,6 +17,7 @@ public class SyntaxTreeNode {
     private SyntaxTreeNode secondChild;
 
     private SyntaxTreeNode thirdChild;
+    private boolean typeChecked;
 
     public SyntaxTreeNode(TreeNodeType nodeType) {
         this.nodeType = nodeType;
@@ -28,6 +29,15 @@ public class SyntaxTreeNode {
         this.valueRecord = valueRecord;
     }
 
+
+    public boolean getTypeChecked() {
+        return typeChecked;
+    }
+
+    public void setTypeChecked() {
+        this.typeChecked = true;
+    }
+    
     public TreeNodeType getNodeType() {
         return nodeType;
     }

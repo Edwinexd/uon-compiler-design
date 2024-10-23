@@ -41,6 +41,8 @@ public class Parser {
             return;
         }
 
+        typeCheck(node);
+
         list.add(node);
         traverseNode(node.getFirstChild().orElse(null), list);
         traverseNode(node.getSecondChild().orElse(null), list);
@@ -2361,5 +2363,260 @@ public class Parser {
         }
         return false;
     }
+
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // SEMANTIC ANALYSIS TINGS
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    //#region SEMANTIC ANALYSIS TINGS
+
+    private boolean typeIsOperator(TreeNodeType type) {
+        return type == TreeNodeType.NEQL || 
+            type == TreeNodeType.NNEQ || 
+            type == TreeNodeType.NGRT || 
+            type == TreeNodeType.NLSS || 
+            type == TreeNodeType.NLEQ || 
+            type == TreeNodeType.NGEQ || 
+            type == TreeNodeType.NADD || 
+            type == TreeNodeType.NSUB || 
+            type == TreeNodeType.NMUL ||
+            type == TreeNodeType.NDIV ||
+            type == TreeNodeType.NMOD ||
+            type == TreeNodeType.NPOW;
+    }
+
+    private boolean typeIsBooleanOperator(TreeNodeType type) {
+        return type == TreeNodeType.NAND || 
+            type == TreeNodeType.NOR || 
+            type == TreeNodeType.NXOR;
+    }
+
+    private boolean isNumeric(DeclarationType type) {
+        return type == DeclarationType.INT || 
+        type == DeclarationType.FLOAT;
+    }
+    
+    // pre order travesal only as it sets checked, the idea of this is to check it at the highest point and prevent the same operator from being checked multiple times
+    // when moving forn the pre order ;)
+    private void typeCheck(SyntaxTreeNode node) 
+    {
+        if (node == null) {
+            return;
+        }
+
+        var type = node.getNodeType();
+
+        // Arithmitic operators
+        if (typeIsOperator(type)) {
+            recursiveOperatorTypeCheck(node);
+        }
+        // bool operators 
+        else if (typeIsBooleanOperator(type)) {
+            recursiveBooleanOperatorTypeCheck(node);
+        }
+        else if (type == TreeNodeType.NINIT) {
+            // TODO: Check if the type of the left and right are the same without the other shit because this is an assignment
+            // i think this has to do with the real variables and real arrays
+        }
+
+        return;
+
+    }
+
+    // basically it starts at the first operator then recursively checks the children to
+    // ensure that they are the same type, if not a semantic error is thrown
+
+    private SyntaxTreeNode recursiveOperatorTypeCheck(SyntaxTreeNode node) {
+        if (node == null) {
+            return null;
+        }
+
+        if (!node.getValueRecord().isPresent())
+        {
+            return null;
+        }
+
+        if (node.getTypeChecked() == true) {
+            return null;
+        }
+
+        SyntaxTreeNode nodeOne = node.getFirstChild().isPresent() ? recursiveTypeCheck(node.getFirstChild().get()) : null;
+
+        SyntaxTreeNode nodeTwo = node.getThirdChild().isPresent() ? recursiveTypeCheck(node.getThirdChild().get()) : null;
+
+        node.setTypeChecked(); // so that the pre order traversal does not re check an operator that has already been checked
+
+        if (nodeOne == null || nodeTwo == null) {
+            return null;
+        }
+        if (!nodeOne.getValueRecord().isPresent() || !nodeTwo.getValueRecord().isPresent()) {
+            return null;
+        }
+        if (!nodeOne.getValueRecord().get().getDeclaration().isPresent() || !nodeTwo.getValueRecord().get().getDeclaration().isPresent()) {
+            return null;
+        }
+
+        DeclarationType typeOne = nodeOne.getValueRecord().get().getDeclaration().get().getType();
+        DeclarationType typeTwo = nodeTwo.getValueRecord().get().getDeclaration().get().getType();
+
+        if (typeOne != typeTwo) {
+            // SEMANTIC ERROR
+            
+            int errorLine = node.getValueRecord().get().getOgToken().getLine();
+            int errorColumn = node.getValueRecord().get().getOgToken().getColumn();
+            String errorMessage = String.format("Semantic Error - Arithemic operations can only be done on 2 of the same types (line %d, column %d)", 
+            errorLine, 
+            errorColumn);
+            tokenOutput.feedSemanticError(errorMessage);
+
+            return null;
+        }
+
+        return nodeOne;
+
+    }
+
+    private SyntaxTreeNode recursiveTypeCheck(SyntaxTreeNode node) {
+        if (node == null) {
+            return null;
+        }
+
+        TreeNodeType type = node.getNodeType();
+        TokenType tokenType = node.getValueRecord().isPresent() ? node.getValueRecord().get().getType() : null;
+
+        if (typeIsOperator(type)) { // if it is an operator then recursive operator
+
+            return recursiveOperatorTypeCheck(node);
+
+        }
+        else if (tokenType == TokenType.TIDEN) { // if it is an identifier then check then convert the type to token type
+
+            DeclarationType decType = node.getValueRecord().get().getDeclaration().get().getType();
+
+            if (decType == DeclarationType.INT || decType == DeclarationType.FLOAT) {
+                return node;
+            }
+            else {
+                // SEMANTIC ERROR CANNOT BE A WHATEVER IT IS
+                
+                int errorLine = node.getValueRecord().get().getOgToken().getLine();
+                int errorColumn = node.getValueRecord().get().getOgToken().getColumn();
+                String errorMessage = String.format("Semantic Error - Arithemic operations can only be done on numeric types (line %d, column %d)", errorLine, errorColumn);
+                tokenOutput.feedSemanticError(errorMessage);
+
+                return null;
+            }
+        }
+        else { // if bare then just return the type
+            if (isNumeric((node.getValueRecord().isPresent() ?
+                node.getValueRecord().get().getDeclaration().get().getType()
+                :
+                null)
+            )) {
+                return node;
+            }
+            // SEMANTIC ERROR
+            
+            int errorLine = node.getValueRecord().get().getOgToken().getLine();
+            int errorColumn = node.getValueRecord().get().getOgToken().getColumn();
+            String errorMessage = String.format("Semantic Error - Arithemic operations can only be done on numeric types (line %d, column %d)", errorLine, errorColumn);
+            tokenOutput.feedSemanticError(errorMessage);
+
+            return null;
+        }
+    }
+
+    // same as above except for boolean operators
+    private SyntaxTreeNode recursiveBooleanOperatorTypeCheck(SyntaxTreeNode node) {
+
+        if (node == null) {
+            return null;
+        }
+
+        if (node.getTypeChecked() == true) {
+            return null;
+        }
+
+        SyntaxTreeNode nodeOne = node.getFirstChild().isPresent() ? recursiveBooleanTypeCheck(node.getFirstChild().get()) : null;
+
+        SyntaxTreeNode nodeTwo = node.getThirdChild().isPresent() ? recursiveBooleanTypeCheck(node.getThirdChild().get()) : null;
+
+        node.setTypeChecked(); // so that the pre order traversal does not re check an operator that has already been checked
+        
+        if (nodeOne == null || nodeTwo == null) {
+            return null;
+        }
+        if (!nodeOne.getValueRecord().isPresent() || !nodeTwo.getValueRecord().isPresent()) {
+            return null;
+        }
+        if (!nodeOne.getValueRecord().get().getDeclaration().isPresent() || !nodeTwo.getValueRecord().get().getDeclaration().isPresent()) {
+            return null;
+        }
+
+        DeclarationType typeOne = nodeOne.getValueRecord().get().getDeclaration().get().getType();
+        DeclarationType typeTwo = nodeTwo.getValueRecord().get().getDeclaration().get().getType();
+
+        if (typeOne != DeclarationType.BOOL || typeTwo != DeclarationType.BOOL) {
+            if (typeOne != DeclarationType.BOOL) {
+                // SEMANTIC ERROR
+                
+                var errorLine = node.getValueRecord().get().getOgToken().getLine();
+                var errorColumn = node.getValueRecord().get().getOgToken().getColumn();
+                String errorMessage = String.format("Semantic Error - Boolean operations can only be done on boolean types (line %d, column %d)", errorLine, errorColumn);
+                tokenOutput.feedSemanticError(errorMessage);
+            }
+            else if (typeTwo != DeclarationType.BOOL) {
+                // SEMANTIC ERROR
+                
+                var errorLine = node.getValueRecord().get().getOgToken().getLine();
+                var errorColumn = node.getValueRecord().get().getOgToken().getColumn();
+                String errorMessage = String.format("Semantic Error - Boolean operations can only be done on boolean types (line %d, column %d)", errorLine, errorColumn);
+                tokenOutput.feedSemanticError(errorMessage);
+            }
+            return null;
+        }
+
+        return node;
+
+    }
+
+    private SyntaxTreeNode recursiveBooleanTypeCheck(SyntaxTreeNode node) {
+        if (node == null) {
+            return null;
+        }
+
+        TreeNodeType type = node.getNodeType();
+        TokenType tokenType = node.getValueRecord().isPresent() ? node.getValueRecord().get().getType() : null;
+
+        if (typeIsBooleanOperator(type)) { // if it is an operator then recursive operator
+
+            return recursiveBooleanOperatorTypeCheck(node);
+
+        }
+        else if (tokenType == TokenType.TIDEN) { // if it is an identifier then check then convert the type to token type
+
+            var decType = node.getValueRecord().get().getDeclaration().get().getType();
+
+            if (decType == DeclarationType.BOOL) {
+                return node;
+            }
+            else {
+                // SEMANTIC ERROR CANNOT BE A WHATEVER IT IS
+                
+                var errorLine = node.getValueRecord().get().getOgToken().getLine();
+                var errorColumn = node.getValueRecord().get().getOgToken().getColumn();
+                String errorMessage = String.format("Semantic Error - Boolean operations can only be done on boolean types (line %d, column %d)", errorLine, errorColumn);
+                tokenOutput.feedSemanticError(errorMessage);
+
+                return null;
+            }
+        }
+        else { // if bare then just return the type
+            return node;
+        }
+    }
+
+    //#endregion
 
 }
